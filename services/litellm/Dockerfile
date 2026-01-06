@@ -19,13 +19,19 @@ RUN pip install --no-cache-dir \
 # Create a minimal config directory
 RUN mkdir -p /app/config
 
-# Create a startup script that handles LiteLLM configuration
+# Copy the default configuration file
+COPY config.yaml /app/config/config.yaml
+
+# Create a startup script that starts LiteLLM with the config
 RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
-# Start LiteLLM server\n\
-litellm --host ${LITELLM_HOST:-0.0.0.0} --port ${LITELLM_PORT:-4000} --config /app/config/config.yaml 2>&1 || \n\
-litellm --host ${LITELLM_HOST:-0.0.0.0} --port ${LITELLM_PORT:-4000}' > /app/start.sh && \
+echo "Starting LiteLLM server..."\n\
+echo "Host: ${LITELLM_HOST:-0.0.0.0}"\n\
+echo "Port: ${LITELLM_PORT:-4000}"\n\
+\n\
+# Start LiteLLM with the config file\n\
+exec litellm --host ${LITELLM_HOST:-0.0.0.0} --port ${LITELLM_PORT:-4000} --config /app/config/config.yaml' > /app/start.sh && \
     chmod +x /app/start.sh
 
 # Expose port 4000

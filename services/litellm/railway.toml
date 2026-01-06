@@ -10,4 +10,4 @@ restartPolicyMaxRetries = 10
 
 [healthcheck]
 path = "/health"
-timeout = 100
+timeout = 300

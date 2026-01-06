@@ -1,0 +1,12 @@
+# Railway configuration for React Client service
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = ""
+restartPolicyType = "ON_FAILURE"
+
+[healthcheck]
+path = "/"
+timeout = 100

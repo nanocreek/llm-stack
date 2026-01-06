@@ -1,0 +1,12 @@
+# Railway configuration for R2R service
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = ""
+restartPolicyType = "ON_FAILURE"
+
+[healthcheck]
+path = "/health"
+timeout = 100

@@ -1,0 +1,119 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "name": "LLM Stack Template",
+  "description": "React client, R2R, Qdrant, LiteLLM, and OpenWebUI with managed PostgreSQL and Redis on Railway.",
+  "plugins": [
+    {
+      "name": "Postgres",
+      "type": "postgresql"
+    },
+    {
+      "name": "Redis",
+      "type": "redis"
+    }
+  ],
+  "services": [
+    {
+      "name": "react-client",
+      "source": "services/react-client",
+      "healthcheck": {
+        "path": "/",
+        "port": 3000
+      },
+      "variables": {
+        "PORT": "3000",
+        "VITE_API_BASE_URL": "http://openwebui.railway.internal:8080"
+      },
+      "dependsOn": [
+        "openwebui"
+      ]
+    },
+    {
+      "name": "r2r",
+      "source": "services/r2r",
+      "healthcheck": {
+        "path": "/health",
+        "port": 7272
+      },
+      "variables": {
+        "R2R_PORT": "7272",
+        "R2R_HOST": "0.0.0.0",
+        "R2R_POSTGRES_HOST": "${{Postgres.PGHOST}}",
+        "R2R_POSTGRES_PORT": "${{Postgres.PGPORT}}",
+        "R2R_POSTGRES_USER": "${{Postgres.PGUSER}}",
+        "R2R_POSTGRES_PASSWORD": "${{Postgres.PGPASSWORD}}",
+        "R2R_POSTGRES_DBNAME": "${{Postgres.PGDATABASE}}",
+        "R2R_VECTOR_DB_PROVIDER": "qdrant",
+        "R2R_QDRANT_HOST": "qdrant.railway.internal",
+        "R2R_QDRANT_PORT": "6333",
+        "REDIS_URL": "${{Redis.REDIS_URL}}"
+      },
+      "dependsOn": [
+        "qdrant"
+      ]
+    },
+    {
+      "name": "qdrant",
+      "source": "services/qdrant",
+      "healthcheck": {
+        "path": "/readyz",
+        "port": 6333
+      },
+      "variables": {
+        "QDRANT__SERVICE__HTTP_PORT": "6333",
+        "QDRANT__SERVICE__GRPC_PORT": "6334"
+      }
+    },
+    {
+      "name": "litellm",
+      "source": "services/litellm",
+      "healthcheck": {
+        "path": "/health",
+        "port": 4000
+      },
+      "variables": {
+        "LITELLM_PORT": "4000",
+        "LITELLM_MASTER_KEY": "${{PROJECT.LITELLM_MASTER_KEY}}",
+        "OPENAI_API_KEY": "${{PROJECT.OPENAI_API_KEY}}",
+        "ANTHROPIC_API_KEY": "${{PROJECT.ANTHROPIC_API_KEY}}"
+      }
+    },
+    {
+      "name": "openwebui",
+      "source": "services/openwebui",
+      "healthcheck": {
+        "path": "/",
+        "port": 8080
+      },
+      "variables": {
+        "PORT": "8080",
+        "OPENAI_API_BASE_URL": "http://litellm.railway.internal:4000/v1",
+        "OPENAI_API_KEY": "${{litellm.LITELLM_MASTER_KEY}}",
+        "WEBUI_AUTH": "false"
+      },
+      "dependsOn": [
+        "litellm"
+      ]
+    }
+  ],
+  "variables": [
+    {
+      "name": "LITELLM_MASTER_KEY",
+      "description": "Master key used by OpenWebUI to call LiteLLM (set a strong random value).",
+      "required": true,
+      "service": "litellm"
+    },
+    {
+      "name": "OPENAI_API_KEY",
+      "description": "Provider key passed through LiteLLM for OpenAI-compatible routes.",
+      "required": false,
+      "service": "litellm"
+    },
+    {
+      "name": "ANTHROPIC_API_KEY",
+      "description": "Optional provider key for Anthropic routed via LiteLLM.",
+      "required": false,
+      "service": "litellm"
+    }
+  ]
+}

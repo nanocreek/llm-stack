@@ -1,0 +1,13 @@
+# Railway configuration for LiteLLM service
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = ""
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[healthcheck]
+path = "/health"
+timeout = 100

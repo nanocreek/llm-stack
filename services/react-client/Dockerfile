@@ -14,6 +14,9 @@ COPY public/ ./public/
 COPY src/ ./src/
 COPY vite.config.js ./
 
+# Copy index.html to root (Vite expects it at project root)
+COPY public/index.html ./index.html
+
 # Build the React application
 RUN npm run build
 

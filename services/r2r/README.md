@@ -42,9 +42,10 @@ R2R requires the following services to be running:
 
 The Dockerfile uses:
 - `python:3.11-slim` base image for minimal size
-- Installs system dependencies required by R2R
-- Installs the R2R framework via pip
-- Includes health check for automatic monitoring
+- Installs system dependencies required by R2R (curl, git, build-essential, postgresql-client)
+- Installs the R2R framework and uvicorn[standard] via pip
+- Includes startup script with dependency wait logic for PostgreSQL and Qdrant
+- Includes health check for automatic monitoring with extended timeout
 
 ## Service-to-Service Communication
 
@@ -107,6 +108,27 @@ services:
 
 ## Troubleshooting
 
-- **Connection Refused**: Ensure PostgreSQL, Qdrant, and Redis are running and accessible
-- **Health Check Failures**: Check logs to verify environment variables are correctly set
-- **Port Already in Use**: Ensure port 7272 is not in use by another service
+### Common Issues
+
+**Health Check Failures**: 
+- Verify that all required services (PostgreSQL, Qdrant, Redis) are running
+- Check logs to verify environment variables are correctly set
+- The startup script includes wait logic for dependencies - check logs for "waiting" messages
+- Health check timeout is set to 300 seconds (5 minutes) to allow time for dependencies
+
+**Wrong R2R Command**:
+- The correct command is `r2r serve --host 0.0.0.0 --port 7272`
+- Not `r2r --host 0.0.0.0 --port 7272` (missing `serve` subcommand)
+
+**Connection Refused**: 
+- Ensure PostgreSQL, Qdrant, and Redis are running and accessible
+- Use `qdrant.railway.internal` for Qdrant host (service-to-service communication)
+- Use Railway service references for PostgreSQL and Redis
+
+**Port Already in Use**: 
+- Ensure port 7272 is not in use by another service
+
+**Container Keeps Restarting**:
+- Check that PostgreSQL and Qdrant are fully initialized before R2R starts
+- Review Railway logs for specific error messages
+- Increase restart policy max retries if needed

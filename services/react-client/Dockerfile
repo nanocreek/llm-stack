@@ -23,22 +23,24 @@ RUN npm run build
 # Stage 2: Production nginx server
 FROM nginx:alpine
 
-# Copy nginx configuration
-RUN echo 'server {\n\
-    listen 3000;\n\
-    server_name _;\n\
-    root /usr/share/nginx/html;\n\
-    index index.html index.htm;\n\
-    \n\
-    location / {\n\
-        try_files $uri $uri/ /index.html;\n\
-    }\n\
-    \n\
-    location ~* ^.+\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {\n\
-        expires 1y;\n\
-        add_header Cache-Control "public, immutable";\n\
-    }\n\
-}' > /etc/nginx/conf.d/default.conf
+# Copy nginx configuration using heredoc
+RUN cat > /etc/nginx/conf.d/default.conf <<'EOF'
+server {
+    listen 3000;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html index.htm;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location ~* ^.+\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+EOF
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html

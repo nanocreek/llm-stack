@@ -1,0 +1,103 @@
+apiVersion: skaffold/v2beta29
+kind: Config
+metadata:
+  name: llm-stack
+
+build:
+  artifacts:
+    # React Client
+    - image: llm-stack/react-client
+      context: services/react-client
+      docker:
+        dockerfile: Dockerfile
+
+    # R2R (RAG Framework)
+    - image: llm-stack/r2r
+      context: services/r2r
+      docker:
+        dockerfile: Dockerfile
+
+    # Qdrant (Vector Database)
+    - image: llm-stack/qdrant
+      context: services/qdrant
+      docker:
+        dockerfile: Dockerfile
+
+    # LiteLLM (LLM Proxy)
+    - image: llm-stack/litellm
+      context: services/litellm
+      docker:
+        dockerfile: Dockerfile
+
+    # OpenWebUI (Chat Interface)
+    - image: llm-stack/openwebui
+      context: services/openwebui
+      docker:
+        dockerfile: Dockerfile
+
+deploy:
+  helm:
+    releases:
+      - name: postgres
+        remoteChart: bitnami/postgresql
+        valuesFiles:
+          - k8s/helm/postgres-values.yaml
+        namespace: llm-stack
+        createNamespace: true
+      - name: redis
+        remoteChart: bitnami/redis
+        valuesFiles:
+          - k8s/helm/redis-values.yaml
+        namespace: llm-stack
+        createNamespace: true
+  kustomize:
+    paths:
+      - k8s/overlays/dev
+
+portForward:
+  # React Client
+  - resourceType: deployment
+    resourceName: dev-react-client
+    port: 3000
+    localPort: 3000
+
+  # OpenWebUI
+  - resourceType: deployment
+    resourceName: dev-openwebui
+    port: 8080
+    localPort: 8080
+
+  # LiteLLM
+  - resourceType: deployment
+    resourceName: dev-litellm
+    port: 4000
+    localPort: 4000
+
+  # R2R
+  - resourceType: deployment
+    resourceName: dev-r2r
+    port: 7272
+    localPort: 7272
+
+  # Qdrant
+  - resourceType: deployment
+    resourceName: dev-qdrant
+    port: 6333
+    localPort: 6333
+
+  # PostgreSQL
+  - resourceType: service
+    resourceName: postgres
+    port: 5432
+    localPort: 5432
+
+  # Redis
+  - resourceType: service
+    resourceName: redis-master
+    port: 6379
+    localPort: 6379
+
+profiles:
+  - name: minikube
+    activation:
+      - kubeContext: minikube

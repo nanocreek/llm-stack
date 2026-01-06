@@ -1,0 +1,24 @@
+# PostgreSQL Helm Chart Values for Local Development
+global:
+  postgresql:
+    auth:
+      username: postgres
+      password: postgres-dev-password
+      database: r2r_db
+
+primary:
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClassName: standard
+
+metrics:
+  enabled: false
+
+resources:
+  limits:
+    memory: 512Mi
+    cpu: 500m
+  requests:
+    memory: 256Mi
+    cpu: 250m

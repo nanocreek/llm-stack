@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: llm-stack
+
+commonLabels:
+  app.kubernetes.io/part-of: llm-stack
+  managed-by: kustomize
+
+resources:
+  - qdrant-deployment.yaml
+  - qdrant-service.yaml
+  - litellm-deployment.yaml
+  - litellm-configmap.yaml
+  - litellm-service.yaml
+  - r2r-deployment.yaml
+  - r2r-service.yaml
+  - openwebui-deployment.yaml
+  - openwebui-service.yaml
+  - react-client-deployment.yaml
+  - react-client-service.yaml
+
+patchesStrategicMerge: []
+
+configMapGenerator: []

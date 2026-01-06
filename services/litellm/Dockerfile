@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install LiteLLM and required dependencies
 RUN pip install --no-cache-dir \
-    litellm \
+    'litellm[proxy]' \
     python-dotenv \
     requests
 

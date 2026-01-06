@@ -1,0 +1,25 @@
+# Redis Helm Chart Values for Local Development
+auth:
+  enabled: false
+
+master:
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClassName: standard
+
+replica:
+  replicaCount: 0
+  persistence:
+    enabled: false
+
+resources:
+  limits:
+    memory: 512Mi
+    cpu: 500m
+  requests:
+    memory: 256Mi
+    cpu: 250m
+
+metrics:
+  enabled: false

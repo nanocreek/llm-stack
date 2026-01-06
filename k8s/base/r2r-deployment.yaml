@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: r2r
+  labels:
+    app: r2r
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: r2r
+  template:
+    metadata:
+      labels:
+        app: r2r
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: postgres:15-alpine
+        command:
+          - sh
+          - -c
+          - until pg_isready -h postgres -p 5432 -U postgres; do echo waiting for postgres; sleep 2; done
+      - name: wait-for-qdrant
+        image: curlimages/curl:latest
+        command:
+          - sh
+          - -c
+          - until curl -f http://qdrant:6333/health; do echo waiting for qdrant; sleep 2; done
+      containers:
+      - name: r2r
+        image: llm-stack/r2r:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 7272
+          name: http
+        env:
+        - name: R2R_PORT
+          value: "7272"
+        - name: R2R_HOST
+          value: "0.0.0.0"
+        - name: R2R_POSTGRES_HOST
+          value: "postgres-postgresql"
+        - name: R2R_POSTGRES_PORT
+          value: "5432"
+        - name: R2R_POSTGRES_USER
+          value: "postgres"
+        - name: R2R_POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-postgresql
+              key: postgres-password
+        - name: R2R_POSTGRES_DBNAME
+          value: "r2r_db"
+        - name: R2R_QDRANT_HOST
+          value: "qdrant"
+        - name: R2R_QDRANT_PORT
+          value: "6333"
+        - name: REDIS_URL
+          value: "redis://redis-master:6379/0"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /v3/health
+            port: 7272
+          initialDelaySeconds: 120
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /v3/health
+            port: 7272
+          initialDelaySeconds: 60
+          periodSeconds: 5

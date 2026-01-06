@@ -1,0 +1,100 @@
+apiVersion: v1
+data:
+  config.yaml: "# LiteLLM Configuration File\n# This is a minimal configuration that
+    allows LiteLLM to start\n# API keys should be set via environment variables\n\nmodel_list:\n
+    \ # OpenAI models - requires OPENAI_API_KEY environment variable\n  - model_name:
+    gpt-4\n    litellm_params:\n      model: gpt-4\n      api_key: os.environ/OPENAI_API_KEY\n
+    \ \n  - model_name: gpt-4-turbo\n    litellm_params:\n      model: gpt-4-turbo-preview\n
+    \     api_key: os.environ/OPENAI_API_KEY\n  \n  - model_name: gpt-3.5-turbo\n
+    \   litellm_params:\n      model: gpt-3.5-turbo\n      api_key: os.environ/OPENAI_API_KEY\n
+    \ \n  # Anthropic models - requires ANTHROPIC_API_KEY environment variable\n  -
+    model_name: claude-3-opus\n    litellm_params:\n      model: claude-3-opus-20240229\n
+    \     api_key: os.environ/ANTHROPIC_API_KEY\n  \n  - model_name: claude-3-sonnet\n
+    \   litellm_params:\n      model: claude-3-sonnet-20240229\n      api_key: os.environ/ANTHROPIC_API_KEY\n
+    \ \n  - model_name: claude-3-haiku\n    litellm_params:\n      model: claude-3-haiku-20240307\n
+    \     api_key: os.environ/ANTHROPIC_API_KEY\n\n# General settings\ngeneral_settings:\n
+    \ master_key: os.environ/LITELLM_MASTER_KEY\n  \n  # Database settings (optional
+    - requires DATABASE_URL)\n  # database_url: os.environ/DATABASE_URL\n  \n  # Redis
+    settings (optional - requires REDIS_URL)\n  # redis_host: os.environ/REDIS_HOST\n
+    \ # redis_port: os.environ/REDIS_PORT\n\nlitellm_settings:\n  success_callback:
+    []\n  failure_callback: []\n  # Enable detailed logging\n  set_verbose: false\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/part-of: llm-stack
+    env: development
+    managed-by: skaffold
+  name: dev-litellm-config
+  namespace: default
+---
+apiVersion: v1
+data:
+  POSTGRES_DB: r2r_db
+  POSTGRES_USER: postgres
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/part-of: llm-stack
+    env: development
+    managed-by: skaffold
+  name: dev-postgres-config
+  namespace: default
+---
+apiVersion: v1
+data:
+  anthropic-api-key: c2stYW50LWRldi1rZXktdGVzdA==
+  master-key: c2stZGV2LW1hc3Rlci1rZXktMTIzNDU2Nzg5MDEyMzQ1Njc4OTA=
+  openai-api-key: c2stcHJvai1kZXYta2V5LXRlc3Q=
+kind: Secret
+metadata:
+  labels:
+    env: development
+    managed-by: skaffold
+  name: dev-litellm-secret-767k7tgcb9
+  namespace: default
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/part-of: llm-stack
+    env: development
+    managed-by: skaffold
+  name: dev-postgres-secret
+  namespace: default
+stringData:
+  password: postgres-dev-password-123
+type: Opaque
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: litellm
+    app.kubernetes.io/part-of: llm-stack
+    env: development
+    managed-by: skaffold
+  name: dev-litellm
+  namespace: default
+spec:
+  ports:
+  - port: 4000
+    protocol: TCP
+    targetPort: 4000
+  selector:
+    app: litellm
+    app.kubernetes.io/part-of: llm-stack
+    env: development
+    managed-by: skaffold
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: openwebui
+    app.kubernetes.io/part-of: llm-stack
+    env: development
+    managed-by: skaffold
+  name: dev-openwebui

@@ -37,24 +37,39 @@ Before deploying, ensure you have:
 
 ## Initial Setup
 
-### Step 1: Create a New Railway Project
+### Step 1: Deploy via Railway Template
 
-1. Log in to [railway.app](https://railway.app)
-2. Click **"New Project"** in the top right corner
-3. Select **"Deploy from GitHub repo"**
-4. Authorize Railway to access your GitHub repositories if prompted
-5. Search for and select your `llm-stack` repository
-6. Click **"Import"**
+**Option A: Deploy from Template URL (Recommended)**
 
-### Step 2: Review Template Configuration
+If this template is published on Railway:
+1. Visit the template URL (provided by the template publisher)
+2. Click **"Deploy Now"**
+3. Railway will prompt you to configure environment variables
+4. Click **"Deploy"**
 
-Railway will automatically detect the [`railway.json`](railway.json) template and display:
+**Option B: Deploy from Your Own GitHub Repo**
 
-- **Template Name**: LLM Stack Template
-- **Services**: 5 custom services (react-client, r2r, qdrant, litellm, openwebui)
-- **Plugins**: PostgreSQL and Redis (to be added manually)
+1. Fork this repository to your GitHub account
+2. Log in to [railway.app](https://railway.app)
+3. Click **"New Project"** in the top right corner
+4. Select **"Empty Project"**
+5. For each service, click **"Add Service"** → **"GitHub Repo"**
+6. Select your forked repository
+7. When prompted to select a root directory, choose the appropriate service directory:
+   - `services/react-client` for React Client
+   - `services/r2r` for R2R
+   - `services/qdrant` for Qdrant
+   - `services/litellm` for LiteLLM
+   - `services/openwebui` for OpenWebUI
 
-Review the configuration and click **"Deploy"** to proceed.
+**Important**: Railway requires each service to be added individually when deploying from a monorepo structure.
+
+### Step 2: Review Service Configuration
+
+After adding all services, you should have:
+
+- **5 Custom Services**: react-client, r2r, qdrant, litellm, openwebui
+- **Plugins to be added**: PostgreSQL and Redis (next step)
 
 ### Step 3: Initial Build
 

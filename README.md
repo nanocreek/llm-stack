@@ -67,36 +67,62 @@ This template provides a production-ready LLM application stack that includes:
 
 ### Deployment Steps
 
-1. **Clone the repository**
+This is a **monorepo** containing multiple services. Railway requires each service to be deployed individually.
+
+#### Option A: Deploy from Railway Template (Recommended)
+
+If this template is published on Railway's template marketplace:
+1. Visit the template URL
+2. Click **"Deploy Now"**
+3. Configure environment variables when prompted
+4. Railway will automatically set up all services
+
+#### Option B: Manual Deployment from Your Fork
+
+1. **Fork this repository**
    ```bash
    git clone https://github.com/your-username/llm-stack.git
    cd llm-stack
    ```
 
-2. **Deploy to Railway**
+2. **Create a new Railway project**
    - Go to [railway.app](https://railway.app)
-   - Click "New Project" → "Deploy from GitHub repo"
-   - Select this repository
-   - Railway will automatically detect the [`railway.json`](railway.json) template
+   - Click "New Project" → "Empty Project"
 
-3. **Configure environment variables**
-   - Railway will prompt you to set required variables
-   - Set `LITELLM_MASTER_KEY` to a strong random value
-   - Add your LLM provider API keys (e.g., `OPENAI_API_KEY`)
+3. **Add each service individually**
+   
+   For each service, repeat these steps:
+   - Click "Add Service" → "GitHub Repo"
+   - Select your forked repository
+   - Choose the root directory:
+     - `services/react-client`
+     - `services/r2r`
+     - `services/qdrant`
+     - `services/litellm`
+     - `services/openwebui`
+   - Railway will detect the Dockerfile and `railway.toml` automatically
 
-4. **Add managed plugins**
-   - Click "Add Plugin" → Select "PostgreSQL"
-   - Click "Add Plugin" → Select "Redis"
+4. **Add managed database plugins**
+   - Click "Add Service" → "Database" → "PostgreSQL"
+   - Click "Add Service" → "Database" → "Redis"
 
-5. **Deploy**
+5. **Configure environment variables**
+   
+   Set these shared variables in Railway dashboard:
+   - `LITELLM_MASTER_KEY`: Generate a strong random key (`openssl rand -base64 32`)
+   - `OPENAI_API_KEY`: Your OpenAI API key (optional)
+   - `ANTHROPIC_API_KEY`: Your Anthropic API key (optional)
+
+6. **Wait for deployment**
    - Railway will build and deploy all services
+   - Monitor the build logs for each service
    - Wait for all services to show "Healthy" status
 
-6. **Access your application**
-   - Click on the "react-client" service
-   - Use the generated Railway URL to access your app
+7. **Access your application**
+   - Click on any service to see its public URL
+   - Access the React Client or OpenWebUI to start using the stack
 
-For detailed deployment instructions, see [`DEPLOYMENT.md`](DEPLOYMENT.md).
+For detailed step-by-step instructions, see [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ## Service Communication
 

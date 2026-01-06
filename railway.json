@@ -15,7 +15,10 @@
   "services": [
     {
       "name": "react-client",
-      "source": "services/react-client",
+      "source": {
+        "repo": "nanocreek/llm-stack",
+        "directory": "services/react-client"
+      },
       "healthcheck": {
         "path": "/",
         "port": 3000
@@ -30,7 +33,10 @@
     },
     {
       "name": "r2r",
-      "source": "services/r2r",
+      "source": {
+        "repo": "nanocreek/llm-stack",
+        "directory": "services/r2r"
+      },
       "healthcheck": {
         "path": "/health",
         "port": 7272
@@ -54,7 +60,10 @@
     },
     {
       "name": "qdrant",
-      "source": "services/qdrant",
+      "source": {
+        "repo": "nanocreek/llm-stack",
+        "directory": "services/qdrant"
+      },
       "healthcheck": {
         "path": "/readyz",
         "port": 6333
@@ -66,21 +75,27 @@
     },
     {
       "name": "litellm",
-      "source": "services/litellm",
+      "source": {
+        "repo": "nanocreek/llm-stack",
+        "directory": "services/litellm"
+      },
       "healthcheck": {
         "path": "/health",
         "port": 4000
       },
       "variables": {
         "LITELLM_PORT": "4000",
-        "LITELLM_MASTER_KEY": "${{PROJECT.LITELLM_MASTER_KEY}}",
-        "OPENAI_API_KEY": "${{PROJECT.OPENAI_API_KEY}}",
-        "ANTHROPIC_API_KEY": "${{PROJECT.ANTHROPIC_API_KEY}}"
+        "LITELLM_MASTER_KEY": "${{shared.LITELLM_MASTER_KEY}}",
+        "OPENAI_API_KEY": "${{shared.OPENAI_API_KEY}}",
+        "ANTHROPIC_API_KEY": "${{shared.ANTHROPIC_API_KEY}}"
       }
     },
     {
       "name": "openwebui",
-      "source": "services/openwebui",
+      "source": {
+        "repo": "nanocreek/llm-stack",
+        "directory": "services/openwebui"
+      },
       "healthcheck": {
         "path": "/",
         "port": 8080
@@ -96,24 +111,16 @@
       ]
     }
   ],
-  "variables": [
-    {
-      "name": "LITELLM_MASTER_KEY",
+  "variables": {
+    "LITELLM_MASTER_KEY": {
       "description": "Master key used by OpenWebUI to call LiteLLM (set a strong random value).",
-      "required": true,
-      "service": "litellm"
+      "default": "sk-1234567890abcdef"
     },
-    {
-      "name": "OPENAI_API_KEY",
-      "description": "Provider key passed through LiteLLM for OpenAI-compatible routes.",
-      "required": false,
-      "service": "litellm"
+    "OPENAI_API_KEY": {
+      "description": "Provider key passed through LiteLLM for OpenAI-compatible routes."
     },
-    {
-      "name": "ANTHROPIC_API_KEY",
-      "description": "Optional provider key for Anthropic routed via LiteLLM.",
-      "required": false,
-      "service": "litellm"
+    "ANTHROPIC_API_KEY": {
+      "description": "Optional provider key for Anthropic routed via LiteLLM."
     }
-  ]
+  }
 }

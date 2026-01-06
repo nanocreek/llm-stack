@@ -21,7 +21,7 @@ This service provides a Qdrant vector database for the Railway template stack. I
 - **Protocol**: HTTP and gRPC
 
 ### Health Check
-- **Endpoint**: `/` (root endpoint)
+- **Endpoint**: `/health` (dedicated health check endpoint)
 - **Timeout**: 100 seconds
 - **Interval**: 30 seconds
 - **Start Period**: 40 seconds

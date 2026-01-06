@@ -6,8 +6,9 @@ This service deploys the R2R (RAG framework) as part of the Railway template. R2
 
 - **Port**: 7272
 - **Internal DNS**: `r2r.railway.internal:7272`
-- **Health Check**: `/health` endpoint
+- **Health Check**: `/v3/health` endpoint (with `/health` fallback)
 - **Restart Policy**: `ON_FAILURE`
+- **R2R Version**: 3.x (latest)
 
 ## Configuration
 
@@ -111,19 +112,50 @@ services:
 ### Common Issues
 
 **Health Check Failures**: 
-- Verify that all required services (PostgreSQL, Qdrant, Redis) are running
-- Check logs to verify environment variables are correctly set
-- The startup script includes wait logic for dependencies - check logs for "waiting" messages
-- Health check timeout is set to 300 seconds (5 minutes) to allow time for dependencies
+- **Symptom**: Service deploys successfully but health checks continuously fail with "service unavailable"
+- **Root Causes**:
+  1. R2R v3.x uses `/v3/health` endpoint instead of `/health` - fixed in `railway.toml`
+  2. R2R needs proper configuration file to connect to PostgreSQL and Qdrant
+  3. R2R requires specific environment variable format (e.g., `POSTGRES_HOST` not `R2R_POSTGRES_HOST` internally)
+- **Solution**: 
+  - The Dockerfile now creates a proper `r2r.json` configuration file
+  - Startup script exports environment variables in R2R's expected format
+  - Health check tries both `/v3/health` and `/health` endpoints
+  - Extended start period (120s) allows time for database connections
+
+**Missing Configuration File**:
+- **Symptom**: R2R server fails to start or crashes immediately
+- **Solution**: The Dockerfile automatically creates `/app/config/r2r.json` with:
+  - Database provider: postgres
+  - Vector database provider: qdrant
+  - Completions provider: litellm (for LLM integration)
+
+**Environment Variable Mapping**:
+- R2R internally uses different variable names than Railway provides
+- The startup script now maps:
+  - `R2R_POSTGRES_HOST` → `POSTGRES_HOST`
+  - `R2R_POSTGRES_PORT` → `POSTGRES_PORT`
+  - `R2R_POSTGRES_USER` → `POSTGRES_USER`
+  - `R2R_POSTGRES_PASSWORD` → `POSTGRES_PASSWORD`
+  - `R2R_POSTGRES_DBNAME` → `POSTGRES_DBNAME`
+  - `R2R_QDRANT_HOST` → `QDRANT_HOST`
+  - `R2R_QDRANT_PORT` → `QDRANT_PORT`
+
+**Dependency Wait Issues**:
+- The startup script now includes:
+  - Bounded retry loops (30 attempts max) instead of infinite loops
+  - Clear logging of connection attempts
+  - Conditional checks (skips if environment variable not set)
 
 **Wrong R2R Command**:
-- The correct command is `r2r serve --host 0.0.0.0 --port 7272`
-- Not `r2r --host 0.0.0.0 --port 7272` (missing `serve` subcommand)
+- The correct command is `r2r serve --host 0.0.0.0 --port 7272 --config-path /app/config/r2r.json`
+- Must include `serve` subcommand and `--config-path` for proper initialization
 
 **Connection Refused**: 
 - Ensure PostgreSQL, Qdrant, and Redis are running and accessible
 - Use `qdrant.railway.internal` for Qdrant host (service-to-service communication)
 - Use Railway service references for PostgreSQL and Redis
+- Check startup logs for "PostgreSQL is ready!" and "Qdrant is ready!" messages
 
 **Port Already in Use**: 
 - Ensure port 7272 is not in use by another service
@@ -131,4 +163,5 @@ services:
 **Container Keeps Restarting**:
 - Check that PostgreSQL and Qdrant are fully initialized before R2R starts
 - Review Railway logs for specific error messages
-- Increase restart policy max retries if needed
+- Look for startup script output (should see configuration details and dependency checks)
+- Increase restart policy max retries if needed (currently set to 10)

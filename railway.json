@@ -1,7 +1,29 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
-  "name": "LLM Stack Template",
-  "description": "React client, R2R, Qdrant, LiteLLM, and OpenWebUI with managed PostgreSQL and Redis on Railway.",
+  "name": "LLM Stack - Complete AI Application",
+  "description": "Production-ready LLM stack with React frontend, R2R RAG framework, Qdrant vector database, LiteLLM proxy, and OpenWebUI. Includes managed PostgreSQL and Redis.",
+  "services": [
+    {
+      "name": "Qdrant",
+      "source": "services/qdrant"
+    },
+    {
+      "name": "LiteLLM",
+      "source": "services/litellm"
+    },
+    {
+      "name": "R2R",
+      "source": "services/r2r"
+    },
+    {
+      "name": "OpenWebUI",
+      "source": "services/openwebui"
+    },
+    {
+      "name": "React-Client",
+      "source": "services/react-client"
+    }
+  ],
   "plugins": [
     {
       "name": "Postgres",
@@ -11,116 +33,5 @@
       "name": "Redis",
       "type": "redis"
     }
-  ],
-  "services": [
-    {
-      "name": "react-client",
-      "source": {
-        "repo": "nanocreek/llm-stack",
-        "directory": "services/react-client"
-      },
-      "healthcheck": {
-        "path": "/",
-        "port": 3000
-      },
-      "variables": {
-        "PORT": "3000",
-        "VITE_API_BASE_URL": "http://openwebui.railway.internal:8080"
-      },
-      "dependsOn": [
-        "openwebui"
-      ]
-    },
-    {
-      "name": "r2r",
-      "source": {
-        "repo": "nanocreek/llm-stack",
-        "directory": "services/r2r"
-      },
-      "healthcheck": {
-        "path": "/health",
-        "port": 7272
-      },
-      "variables": {
-        "R2R_PORT": "7272",
-        "R2R_HOST": "0.0.0.0",
-        "R2R_POSTGRES_HOST": "${{Postgres.PGHOST}}",
-        "R2R_POSTGRES_PORT": "${{Postgres.PGPORT}}",
-        "R2R_POSTGRES_USER": "${{Postgres.PGUSER}}",
-        "R2R_POSTGRES_PASSWORD": "${{Postgres.PGPASSWORD}}",
-        "R2R_POSTGRES_DBNAME": "${{Postgres.PGDATABASE}}",
-        "R2R_VECTOR_DB_PROVIDER": "qdrant",
-        "R2R_QDRANT_HOST": "qdrant.railway.internal",
-        "R2R_QDRANT_PORT": "6333",
-        "REDIS_URL": "${{Redis.REDIS_URL}}"
-      },
-      "dependsOn": [
-        "qdrant"
-      ]
-    },
-    {
-      "name": "qdrant",
-      "source": {
-        "repo": "nanocreek/llm-stack",
-        "directory": "services/qdrant"
-      },
-      "healthcheck": {
-        "path": "/readyz",
-        "port": 6333
-      },
-      "variables": {
-        "QDRANT__SERVICE__HTTP_PORT": "6333",
-        "QDRANT__SERVICE__GRPC_PORT": "6334"
-      }
-    },
-    {
-      "name": "litellm",
-      "source": {
-        "repo": "nanocreek/llm-stack",
-        "directory": "services/litellm"
-      },
-      "healthcheck": {
-        "path": "/health",
-        "port": 4000
-      },
-      "variables": {
-        "LITELLM_PORT": "4000",
-        "LITELLM_MASTER_KEY": "${{shared.LITELLM_MASTER_KEY}}",
-        "OPENAI_API_KEY": "${{shared.OPENAI_API_KEY}}",
-        "ANTHROPIC_API_KEY": "${{shared.ANTHROPIC_API_KEY}}"
-      }
-    },
-    {
-      "name": "openwebui",
-      "source": {
-        "repo": "nanocreek/llm-stack",
-        "directory": "services/openwebui"
-      },
-      "healthcheck": {
-        "path": "/",
-        "port": 8080
-      },
-      "variables": {
-        "PORT": "8080",
-        "OPENAI_API_BASE_URL": "http://litellm.railway.internal:4000/v1",
-        "OPENAI_API_KEY": "${{litellm.LITELLM_MASTER_KEY}}",
-        "WEBUI_AUTH": "false"
-      },
-      "dependsOn": [
-        "litellm"
-      ]
-    }
-  ],
-  "variables": {
-    "LITELLM_MASTER_KEY": {
-      "description": "Master key used by OpenWebUI to call LiteLLM (set a strong random value).",
-      "default": "sk-1234567890abcdef"
-    },
-    "OPENAI_API_KEY": {
-      "description": "Provider key passed through LiteLLM for OpenAI-compatible routes."
-    },
-    "ANTHROPIC_API_KEY": {
-      "description": "Optional provider key for Anthropic routed via LiteLLM."
-    }
-  }
+  ]
 }

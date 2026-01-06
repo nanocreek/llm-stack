@@ -37,49 +37,107 @@ Before deploying, ensure you have:
 
 ## Initial Setup
 
-### Step 1: Deploy via Railway Template
+### ⚠️ Critical: This is a Monorepo
 
-**Option A: Deploy from Template URL (Recommended)**
+This repository contains **5 separate services** in subdirectories. Railway **CANNOT** automatically detect and deploy all services when you simply import this repo. 
 
-If this template is published on Railway:
-1. Visit the template URL (provided by the template publisher)
-2. Click **"Deploy Now"**
-3. Railway will prompt you to configure environment variables
-4. Click **"Deploy"**
+**DO NOT** just click "Deploy from GitHub repo" at the root level - it will fail because the root directory contains only documentation files.
 
-**Option B: Deploy from Your Own GitHub Repo**
+You **MUST** add each service individually and specify its root directory.
 
-1. Fork this repository to your GitHub account
-2. Log in to [railway.app](https://railway.app)
-3. Click **"New Project"** in the top right corner
-4. Select **"Empty Project"**
-5. For each service, click **"Add Service"** → **"GitHub Repo"**
-6. Select your forked repository
-7. When prompted to select a root directory, choose the appropriate service directory:
-   - `services/react-client` for React Client
-   - `services/r2r` for R2R
-   - `services/qdrant` for Qdrant
-   - `services/litellm` for LiteLLM
-   - `services/openwebui` for OpenWebUI
+### Step 1: Fork the Repository
 
-**Important**: Railway requires each service to be added individually when deploying from a monorepo structure.
+1. Go to https://github.com/nanocreek/llm-stack (or your fork)
+2. Click **"Fork"** to create your own copy
+3. Clone your fork locally (optional):
+   ```bash
+   git clone https://github.com/YOUR-USERNAME/llm-stack.git
+   cd llm-stack
+   ```
 
-### Step 2: Review Service Configuration
+### Step 2: Create an Empty Railway Project
 
-After adding all services, you should have:
+1. Log in to [railway.app](https://railway.app)
+2. Click **"New Project"** in the dashboard
+3. Select **"Empty Project"** (NOT "Deploy from GitHub repo")
+4. Give your project a name like "LLM Stack"
+5. You now have an empty project - good!
 
-- **5 Custom Services**: react-client, r2r, qdrant, litellm, openwebui
-- **Plugins to be added**: PostgreSQL and Redis (next step)
+### Step 3: Add Database Plugins FIRST
 
-### Step 3: Initial Build
+Before adding any services, add the databases. This ensures connection variables are available when services start.
 
-Railway will begin building all services. This process may take several minutes as each service:
+**Add PostgreSQL:**
+1. In your empty project, click the **"+ New"** button
+2. Select **"Database"**
+3. Choose **"Add PostgreSQL"**
+4. Wait for it to provision (you'll see a "Running" status)
 
-1. Clones the repository
-2. Builds the Docker image
-3. Deploys to Railway's infrastructure
+**Add Redis:**
+1. Click the **"+ New"** button again
+2. Select **"Database"**
+3. Choose **"Add Redis"**
+4. Wait for it to provision (you'll see a "Running" status)
 
-You can monitor the build progress in the **"Builds"** tab of each service.
+✅ You should now have 2 plugins showing "Running" status.
+
+### Step 4: Add Each Service Individually
+
+You need to add all 5 services. For **EACH** service listed below, follow the detailed steps.
+
+**Services to Add (in this recommended order):**
+
+| # | Service Name | Root Directory | Description |
+|---|-------------|----------------|-------------|
+| 1 | qdrant | `services/qdrant` | Vector database (no dependencies) |
+| 2 | litellm | `services/litellm` | LLM proxy (no dependencies) |
+| 3 | r2r | `services/r2r` | RAG framework (depends on qdrant, postgres, redis) |
+| 4 | openwebui | `services/openwebui` | Web UI (depends on litellm) |
+| 5 | react-client | `services/react-client` | Frontend (depends on openwebui) |
+
+**Detailed Steps for EACH Service:**
+
+1. **Click "
++ New"** in your Railway project
+2. **Select "GitHub Repo"**
+3. **Authorize Railway** to access your GitHub account (first time only)
+4. **Select your forked repository** (`llm-stack`)
+5. **⚠️ CRITICAL STEP**: Before deploying, you must set the root directory:
+   - Railway may ask you to configure the service
+   - Look for **"Root Directory"**, **"Source Directory"**, or click **"Settings"**
+   - Enter the **exact path** from the table above (e.g., `services/qdrant`)
+   - **Do NOT include a leading or trailing slash**
+6. **Verify detection**: Railway should now detect:
+   - A `Dockerfile` in that directory
+   - A `railway.toml` in that directory
+   - You'll see these mentioned in the build configuration
+7. **Click "Deploy"** or **"Add Service"**
+8. **Name the service**: Railway will auto-name it, or you can rename it to match the service name (e.g., "qdrant")
+
+**Repeat these 8 steps for all 5 services.**
+
+### Step 5: Verify All Services Are Added
+
+After adding all services, your Railway project should show:
+
+- ✅ **Postgres** (plugin) - Running
+- ✅ **Redis** (plugin) - Running
+- ✅ **qdrant** (service) - Building or Deployed
+- ✅ **litellm** (service) - Building or Deployed
+- ✅ **r2r** (service) - Building or Deployed
+- ✅ **openwebui** (service) - Building or Deployed
+- ✅ **react-client** (service) - Building or Deployed
+
+**Total: 7 items** (2 plugins + 5 services)
+
+### Step 6: Monitor Initial Builds
+
+Railway will begin building all services. This may take 5-10 minutes:
+
+1. Click on each service to view its build logs
+2. Watch for successful Docker builds
+3. Some services may crash initially due to missing environment variables - this is expected
+4. We'll fix this in the next section
 
 ## Adding Managed Plugins
 

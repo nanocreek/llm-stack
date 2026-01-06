@@ -1,6 +1,10 @@
 # LLM Stack Template
 
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/new?template=https://github.com/nanocreek/llm-stack)
+
 A complete LLM application stack deployed on Railway, featuring a React frontend, RAG framework, vector database, LLM proxy, and web UI with managed PostgreSQL and Redis.
+
+**✨ One-Click Deployment Available:** Click the button above to deploy all services automatically!
 
 ## Overview
 
@@ -62,67 +66,130 @@ This template provides a production-ready LLM application stack that includes:
 ### Prerequisites
 
 - [Railway](https://railway.app) account
-- Git installed on your local machine
 - At least one LLM provider API key (OpenAI, Anthropic, etc.)
 
-### Deployment Steps
+### Deployment Options
 
-This is a **monorepo** containing multiple services. Railway requires each service to be deployed individually.
+#### Option A: One-Click Deployment (Recommended) 🚀
 
-#### Option A: Deploy from Railway Template (Recommended)
+**Click the "Deploy on Railway" button at the top of this page!**
 
-If this template is published on Railway's template marketplace:
-1. Visit the template URL
-2. Click **"Deploy Now"**
-3. Configure environment variables when prompted
-4. Railway will automatically set up all services
+Railway will automatically:
+- ✅ Create all 5 services from the `services/` directories
+- ✅ Add PostgreSQL and Redis managed plugins
+- ✅ Set up service-to-service communication
+- ✅ Prompt you for required environment variables
 
-#### Option B: Manual Deployment from Your Fork
+**You only need to provide:**
+1. Your LLM provider API keys (e.g., OpenAI, Anthropic)
+2. A master key for LiteLLM authentication
 
-1. **Fork this repository**
+**Deployment takes ~5-10 minutes.** Railway handles all the complexity!
+
+#### Option B: Manual Service-by-Service Deployment
+
+**⚠️ Important: This is a Monorepo**
+
+If you need to deploy manually (e.g., for customization), note that this repository contains **5 separate services** in subdirectories. Railway cannot automatically detect and deploy all services when you import this repository directly.
+
+**DO NOT** simply click "Deploy from GitHub repo" - Railway will fail to build because the root directory contains no application code.
+
+Follow these steps to deploy this monorepo to Railway:
+
+1. **Fork and clone this repository**
    ```bash
    git clone https://github.com/your-username/llm-stack.git
-   cd llm-stack
    ```
 
-2. **Create a new Railway project**
+2. **Create an empty Railway project**
    - Go to [railway.app](https://railway.app)
-   - Click "New Project" → "Empty Project"
+   - Click **"New Project"** → **"Empty Project"**
+   - Give your project a name (e.g., "LLM Stack")
 
-3. **Add each service individually**
+3. **Add PostgreSQL and Redis plugins FIRST**
+   - In your empty project, click **"+ New"**
+   - Select **"Database"** → **"Add PostgreSQL"**
+   - Click **"+ New"** again
+   - Select **"Database"** → **"Add Redis"**
    
-   For each service, repeat these steps:
-   - Click "Add Service" → "GitHub Repo"
-   - Select your forked repository
-   - Choose the root directory:
-     - `services/react-client`
-     - `services/r2r`
-     - `services/qdrant`
-     - `services/litellm`
-     - `services/openwebui`
-   - Railway will detect the Dockerfile and `railway.toml` automatically
+   ✅ Wait for both plugins to finish provisioning before continuing.
 
-4. **Add managed database plugins**
-   - Click "Add Service" → "Database" → "PostgreSQL"
-   - Click "Add Service" → "Database" → "Redis"
+4. **Add each service manually** (repeat for all 5 services)
+
+   For **EACH** of the following services, follow these steps:
+   
+   | Service Name | Root Directory |
+   |-------------|----------------|
+   | qdrant | `services/qdrant` |
+   | litellm | `services/litellm` |
+   | r2r | `services/r2r` |
+   | openwebui | `services/openwebui` |
+   | react-client | `services/react-client` |
+
+   **Steps for each service:**
+   1. Click **"+ New"** in your project
+   2. Select **"GitHub Repo"**
+   3. Authorize Railway to access your GitHub (if first time)
+   4. Select your forked `llm-stack` repository
+   5. **IMPORTANT**: Click **"Add variables"** or **"Configure"**
+   6. Under **"Root Directory"** or **"Source"**, set the path from the table above
+      - Example: For Qdrant, set root directory to `services/qdrant`
+   7. Railway will detect the `Dockerfile` and `railway.toml` in that directory
+   8. Click **"Deploy"** or **"Add service"**
+   9. Repeat for the next service
 
 5. **Configure environment variables**
    
-   Set these shared variables in Railway dashboard:
-   - `LITELLM_MASTER_KEY`: Generate a strong random key (`openssl rand -base64 32`)
-   - `OPENAI_API_KEY`: Your OpenAI API key (optional)
-   - `ANTHROPIC_API_KEY`: Your Anthropic API key (optional)
+   After all services are added, you need to set environment variables:
+   
+   **Option A: Per-Service Variables (Easier)**
+   - Click on the **litellm** service
+   - Go to **"Variables"** tab
+   - Add these variables:
+     - `LITELLM_PORT` = `4000`
+     - `LITELLM_MASTER_KEY` = Generate a strong key: `openssl rand -base64 32`
+     - `OPENAI_API_KEY` = Your OpenAI API key (optional)
+     - `ANTHROPIC_API_KEY` = Your Anthropic API key (optional)
+   
+   - Click on the **openwebui** service → "Variables"
+     - `PORT` = `8080`
+     - `OPENAI_API_BASE_URL` = `http://litellm.railway.internal:4000/v1`
+     - `OPENAI_API_KEY` = Use the same `LITELLM_MASTER_KEY` value
+     - `WEBUI_AUTH` = `false`
+   
+   - Click on the **r2r** service → "Variables"
+     - `R2R_PORT` = `7272`
+     - `R2R_HOST` = `0.0.0.0`
+     - `R2R_POSTGRES_HOST` = `${{Postgres.PGHOST}}`
+     - `R2R_POSTGRES_PORT` = `${{Postgres.PGPORT}}`
+     - `R2R_POSTGRES_USER` = `${{Postgres.PGUSER}}`
+     - `R2R_POSTGRES_PASSWORD` = `${{Postgres.PGPASSWORD}}`
+     - `R2R_POSTGRES_DBNAME` = `${{Postgres.PGDATABASE}}`
+     - `R2R_VECTOR_DB_PROVIDER` = `qdrant`
+     - `R2R_QDRANT_HOST` = `qdrant.railway.internal`
+     - `R2R_QDRANT_PORT` = `6333`
+     - `REDIS_URL` = `${{Redis.REDIS_URL}}`
+   
+   - Click on the **qdrant** service → "Variables"
+     - `QDRANT__SERVICE__HTTP_PORT` = `6333`
+     - `QDRANT__SERVICE__GRPC_PORT` = `6334`
+   
+   - Click on the **react-client** service → "Variables"
+     - `PORT` = `3000`
+     - `VITE_API_BASE_URL` = `http://openwebui.railway.internal:8080`
 
-6. **Wait for deployment**
-   - Railway will build and deploy all services
-   - Monitor the build logs for each service
-   - Wait for all services to show "Healthy" status
+6. **Wait for all services to deploy**
+   - Monitor each service's logs
+   - All services should show "Active" or "Healthy"
+   - Check for any errors in the logs
 
-7. **Access your application**
-   - Click on any service to see its public URL
-   - Access the React Client or OpenWebUI to start using the stack
+7. **Generate a public URL and access your app**
+   - Click on the **openwebui** service (or **react-client**)
+   - Go to **"Settings"** tab
+   - Click **"Generate Domain"** under "Networking"
+   - Use the generated URL to access your application
 
-For detailed step-by-step instructions, see [`DEPLOYMENT.md`](DEPLOYMENT.md).
+**📖 For detailed step-by-step instructions with screenshots, see [`DEPLOYMENT.md`](DEPLOYMENT.md).**
 
 ## Service Communication
 

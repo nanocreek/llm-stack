@@ -3,36 +3,21 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-# Empty startCommand uses the Dockerfile's default CMD/ENTRYPOINT
+# Empty startCommand uses Qdrant's default CMD from base image
 startCommand = ""
 
-# Restart policy - restart on failure for production reliability
+# Restart on failure for reliability
 restartPolicyType = "ON_FAILURE"
 
-# Max retries before giving up - allows time for dependencies to be ready
+# Allow a few retries for transient issues
 restartPolicyMaxRetries = 5
 
-# Maximum 5 minute restart delay to prevent rapid restart loops
-restartPolicyMaxRestartDelay = "5m"
-
-# Initial backup delay of 10 seconds before first restart attempt
-restartPolicyInitialBackoffDelay = "10s"
-
-# Number of concurrent replicas (Railway-managed load balancing)
-numReplicas = 1
-
 [healthcheck]
-# Use /readyz endpoint - proper readiness probe vs /health
+# Use /readyz - proper readiness check
 healthcheckPath = "/readyz"
 
-# Timeout in milliseconds (was 100s, now more reasonable 10s)
-healthcheckTimeout = 10000
-
-# Port where health checks are sent (explicit configuration)
+# Port for health checks
 healthcheckPort = 6333
 
-# Number of consecutive failures before marking unhealthy
-unhealthyThreshold = 3
-
-# Number of consecutive successes to mark healthy again
-healthyThreshold = 1
+# Reasonable timeout
+healthcheckTimeout = 10000

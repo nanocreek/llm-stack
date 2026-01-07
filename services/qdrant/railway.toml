@@ -3,10 +3,36 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
+# Empty startCommand uses the Dockerfile's default CMD/ENTRYPOINT
 startCommand = ""
+
+# Restart policy - restart on failure for production reliability
 restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 10
+
+# Max retries before giving up - allows time for dependencies to be ready
+restartPolicyMaxRetries = 5
+
+# Maximum 5 minute restart delay to prevent rapid restart loops
+restartPolicyMaxRestartDelay = "5m"
+
+# Initial backup delay of 10 seconds before first restart attempt
+restartPolicyInitialBackoffDelay = "10s"
+
+# Number of concurrent replicas (Railway-managed load balancing)
+numReplicas = 1
 
 [healthcheck]
-healthcheckPath = "/health"
-healthcheckTimeout = 100
+# Use /readyz endpoint - proper readiness probe vs /health
+healthcheckPath = "/readyz"
+
+# Timeout in milliseconds (was 100s, now more reasonable 10s)
+healthcheckTimeout = 10000
+
+# Port where health checks are sent (explicit configuration)
+healthcheckPort = 6333
+
+# Number of consecutive failures before marking unhealthy
+unhealthyThreshold = 3
+
+# Number of consecutive successes to mark healthy again
+healthyThreshold = 1

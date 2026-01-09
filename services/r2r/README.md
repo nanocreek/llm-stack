@@ -165,3 +165,36 @@ services:
 - Review Railway logs for specific error messages
 - Look for startup script output (should see configuration details and dependency checks)
 - Increase restart policy max retries if needed (currently set to 10)
+
+### Recent Fixes (January 2026)
+
+**Issue**: R2R service builds successfully but healthcheck continuously fails. No startup logs visible in Railway logs.
+
+**Root Cause**:
+1. Complex startup script embedded in Dockerfile using RUN command was not executing properly
+2. Script had no error output or debugging information
+3. Railway's PORT variable not being respected
+4. Config file generation happening at build time rather than runtime
+
+**Solution Applied**:
+1. **Separated startup script**: Moved from inline RUN command to dedicated [`start.sh`](start.sh:1) file
+2. **Enhanced logging**: Added comprehensive startup logging showing:
+   - Environment variables being used
+   - Dependency wait status (PostgreSQL, Qdrant)
+   - Configuration file creation
+   - Server startup command
+3. **Railway PORT support**: Script now uses `${PORT}` first, then falls back to `${R2R_PORT}` or default 7272
+4. **Runtime config generation**: Config file now created at startup, allowing dynamic configuration
+5. **Better healthcheck**: Changed from `/v3/health` to `/health` as primary endpoint
+6. **LiteLLM integration**: Added LiteLLM URL configuration for completions provider
+
+**Verification Steps**:
+1. Check Railway logs for startup messages starting with "========================================="
+2. Verify you see "✓ PostgreSQL is ready!" and "✓ Qdrant is ready!"
+3. Look for "Starting R2R server..." followed by the r2r serve command
+4. Healthcheck should pass within 2 minutes of dependencies being ready
+
+If you still see issues, check:
+- PostgreSQL plugin is provisioned and healthy
+- Qdrant service is running and accessible at `qdrant.railway.internal:6333`
+- All environment variables are correctly set in `.env.railway`

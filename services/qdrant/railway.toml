@@ -3,21 +3,6 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-# Empty startCommand uses Qdrant's default CMD from base image
 startCommand = ""
-
-# Restart on failure for reliability
 restartPolicyType = "ON_FAILURE"
-
-# Allow a few retries for transient issues
-restartPolicyMaxRetries = 5
-
-[healthcheck]
-# Use /readyz - proper readiness check
-healthcheckPath = "/readyz"
-
-# Port for health checks
-healthcheckPort = 6333
-
-# Reasonable timeout
-healthcheckTimeout = 10000
+restartPolicyMaxRetries = 3

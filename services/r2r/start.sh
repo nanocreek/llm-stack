@@ -15,8 +15,20 @@ echo "Checking Python..."
 python --version
 
 echo "Checking R2R installation..."
-which r2r
-r2r --version || echo "WARNING: Could not get R2R version"
+echo "Looking for r2r command..."
+which r2r || echo "r2r not in PATH"
+
+echo "Checking if r2r module is available..."
+python -c "import r2r; print(f'R2R module found: {r2r.__version__}')" || echo "R2R module not found!"
+
+# Determine how to run R2R
+if command -v r2r &> /dev/null; then
+    R2R_CMD="r2r"
+    echo "Using r2r command"
+else
+    R2R_CMD="python -m r2r"
+    echo "Using python -m r2r"
+fi
 
 echo "================================"
 echo "Environment variables:"
@@ -97,11 +109,11 @@ cat /app/config/r2r.json
 
 echo "================================"
 echo "Starting R2R server..."
-echo "Command: r2r serve --host ${ACTUAL_HOST} --port ${ACTUAL_PORT} --config-path /app/config/r2r.json"
+echo "Command: ${R2R_CMD} serve --host ${ACTUAL_HOST} --port ${ACTUAL_PORT} --config-path /app/config/r2r.json"
 echo "================================"
 
-# Start R2R
-exec r2r serve \
+# Start R2R using the determined command
+exec ${R2R_CMD} serve \
   --host "${ACTUAL_HOST}" \
   --port "${ACTUAL_PORT}" \
   --config-path /app/config/r2r.json

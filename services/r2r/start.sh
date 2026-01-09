@@ -1,54 +1,66 @@
 #!/bin/bash
-set -e
 
-echo "========================================="
-echo "R2R Server Startup"
-echo "========================================="
-echo "Environment Check:"
-echo "  - PORT: ${PORT}"
-echo "  - R2R_PORT: ${R2R_PORT}"
-echo "  - R2R_HOST: ${R2R_HOST}"
-echo "  - PostgreSQL Host: ${R2R_POSTGRES_HOST}"
-echo "  - PostgreSQL Port: ${R2R_POSTGRES_PORT}"
-echo "  - PostgreSQL User: ${R2R_POSTGRES_USER}"
-echo "  - PostgreSQL DB: ${R2R_POSTGRES_DBNAME}"
-echo "  - Qdrant Host: ${R2R_QDRANT_HOST}"
-echo "  - Qdrant Port: ${R2R_QDRANT_PORT}"
-echo "========================================="
+# Make sure we output everything
+set -x
+exec 2>&1
 
-# Use Railway's PORT if available, fallback to R2R_PORT or default
-ACTUAL_PORT=${PORT:-${R2R_PORT:-7272}}
-ACTUAL_HOST=${R2R_HOST:-0.0.0.0}
+echo "===== R2R STARTUP BEGIN ====="
+echo "Date: $(date)"
+echo "PWD: $(pwd)"
+echo "User: $(whoami)"
+echo "================================"
 
-echo "Starting on ${ACTUAL_HOST}:${ACTUAL_PORT}"
+# Check Python and R2R
+echo "Checking Python..."
+python --version
+
+echo "Checking R2R installation..."
+which r2r
+r2r --version || echo "WARNING: Could not get R2R version"
+
+echo "================================"
+echo "Environment variables:"
+env | grep -E "(PORT|R2R_|POSTGRES|QDRANT)" | sort
+echo "================================"
+
+# Set defaults
+export ACTUAL_PORT="${PORT:-${R2R_PORT:-7272}}"
+export ACTUAL_HOST="${R2R_HOST:-0.0.0.0}"
+
+echo "Will bind to: ${ACTUAL_HOST}:${ACTUAL_PORT}"
 
 # Wait for PostgreSQL if configured
-if [ ! -z "${R2R_POSTGRES_HOST}" ]; then
-  echo "Waiting for PostgreSQL at ${R2R_POSTGRES_HOST}:${R2R_POSTGRES_PORT:-5432}..."
+if [ -n "${R2R_POSTGRES_HOST}" ]; then
+  echo "Waiting for PostgreSQL at ${R2R_POSTGRES_HOST}..."
   for i in {1..30}; do
-    if pg_isready -h ${R2R_POSTGRES_HOST} -p ${R2R_POSTGRES_PORT:-5432} -U ${R2R_POSTGRES_USER:-postgres} > /dev/null 2>&1; then
-      echo "✓ PostgreSQL is ready!"
+    if pg_isready -h "${R2R_POSTGRES_HOST}" -p "${R2R_POSTGRES_PORT:-5432}" -U "${R2R_POSTGRES_USER:-postgres}" >/dev/null 2>&1; then
+      echo "PostgreSQL is ready!"
       break
     fi
-    echo "⏳ PostgreSQL not ready - attempt $i/30"
+    echo "PostgreSQL not ready (attempt $i/30)"
     sleep 2
   done
+else
+  echo "Skipping PostgreSQL wait (R2R_POSTGRES_HOST not set)"
 fi
 
 # Wait for Qdrant if configured
-if [ ! -z "${R2R_QDRANT_HOST}" ]; then
-  echo "Waiting for Qdrant at ${R2R_QDRANT_HOST}:${R2R_QDRANT_PORT:-6333}..."
+if [ -n "${R2R_QDRANT_HOST}" ]; then
+  echo "Waiting for Qdrant at ${R2R_QDRANT_HOST}..."
   for i in {1..30}; do
-    if curl -f http://${R2R_QDRANT_HOST}:${R2R_QDRANT_PORT:-6333}/healthz > /dev/null 2>&1; then
-      echo "✓ Qdrant is ready!"
+    if curl -sf "http://${R2R_QDRANT_HOST}:${R2R_QDRANT_PORT:-6333}/healthz" >/dev/null 2>&1; then
+      echo "Qdrant is ready!"
       break
     fi
-    echo "⏳ Qdrant not ready - attempt $i/30"
+    echo "Qdrant not ready (attempt $i/30)"
     sleep 2
   done
+else
+  echo "Skipping Qdrant wait (R2R_QDRANT_HOST not set)"
 fi
 
-# Export environment variables that R2R expects
+# Export environment variables for R2R
+echo "Exporting R2R environment variables..."
 export R2R_PROJECT_NAME="${R2R_PROJECT_NAME:-r2r_default}"
 export POSTGRES_HOST="${R2R_POSTGRES_HOST}"
 export POSTGRES_PORT="${R2R_POSTGRES_PORT:-5432}"
@@ -58,10 +70,10 @@ export POSTGRES_DBNAME="${R2R_POSTGRES_DBNAME:-postgres}"
 export QDRANT_HOST="${R2R_QDRANT_HOST}"
 export QDRANT_PORT="${R2R_QDRANT_PORT:-6333}"
 
-# Create minimal R2R config if it doesn't exist
-if [ ! -f /app/config/r2r.json ]; then
-  echo "Creating R2R configuration..."
-  cat > /app/config/r2r.json <<EOF
+# Create R2R config
+echo "Creating R2R configuration..."
+mkdir -p /app/config
+cat > /app/config/r2r.json <<'EOF'
 {
   "app": {
     "max_logs_per_request": 100
@@ -79,15 +91,17 @@ if [ ! -f /app/config/r2r.json ]; then
   }
 }
 EOF
-fi
 
-echo "========================================="
+echo "Configuration created:"
+cat /app/config/r2r.json
+
+echo "================================"
 echo "Starting R2R server..."
-echo "Config file: /app/config/r2r.json"
-echo "========================================="
+echo "Command: r2r serve --host ${ACTUAL_HOST} --port ${ACTUAL_PORT} --config-path /app/config/r2r.json"
+echo "================================"
 
-# Start R2R server with explicit configuration
+# Start R2R
 exec r2r serve \
-  --host ${ACTUAL_HOST} \
-  --port ${ACTUAL_PORT} \
+  --host "${ACTUAL_HOST}" \
+  --port "${ACTUAL_PORT}" \
   --config-path /app/config/r2r.json

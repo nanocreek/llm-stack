@@ -14,7 +14,9 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --no-cache-dir \
     'litellm[proxy]' \
     python-dotenv \
-    requests
+    requests \
+    psycopg2-binary \
+    redis
 
 # Create a minimal config directory
 RUN mkdir -p /app/config

@@ -34,10 +34,12 @@ The service requires the following environment variables, which are automaticall
 
 ## Dependencies
 
-LiteLLM optionally depends on the following services for enhanced functionality:
+LiteLLM requires the following services for full functionality:
 
-1. **PostgreSQL** - For persistent caching and API call logging
-2. **Redis** - For distributed caching and rate limiting
+1. **PostgreSQL** - Required for persistent caching, API call logging, and request tracking
+2. **Redis** - Required for distributed caching, rate limiting, and session management
+
+Both services must be running and properly configured for LiteLLM to start successfully.
 
 ## Dockerfile
 
@@ -164,6 +166,9 @@ services:
       - LITELLM_PORT=4000
       - LITELLM_MASTER_KEY=dev-key-change-in-production
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/litellm
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
       - REDIS_URL=redis://redis:6379
       - OPENAI_API_KEY=sk-...  # Add your API keys
       - LITELLM_LOG_LEVEL=DEBUG
@@ -178,9 +183,13 @@ To run the container directly:
 # Build the Docker image
 docker build -t litellm:latest ./services/litellm
 
-# Run the container
+# Run the container with database and Redis
 docker run -p 4000:4000 \
   -e LITELLM_MASTER_KEY=dev-key \
+  -e DATABASE_URL=postgresql://user:pass@host:5432/litellm \
+  -e REDIS_HOST=redis-host \
+  -e REDIS_PORT=6379 \
+  -e REDIS_PASSWORD= \
   -e OPENAI_API_KEY=sk-... \
   litellm:latest
 ```
@@ -188,13 +197,17 @@ docker run -p 4000:4000 \
 ## Deployment on Railway
 
 1. Add the LiteLLM service to your Railway project
-2. Add PostgreSQL and Redis plugins (recommended for production)
+2. **Required**: Add PostgreSQL and Redis plugins to your project
 3. Set the following environment variables in your LiteLLM service:
    - `LITELLM_MASTER_KEY`: A strong, unique key for API authentication
+   - `DATABASE_URL`: Use `${{Postgres.DATABASE_URL}}` to auto-reference PostgreSQL
+   - `REDIS_HOST`: Use `${{Redis.REDIS_HOST}}` to auto-reference Redis host
+   - `REDIS_PORT`: Use `${{Redis.REDIS_PORT}}` to auto-reference Redis port
+   - `REDIS_PASSWORD`: Use `${{Redis.REDIS_PASSWORD}}` to auto-reference Redis password
+   - `REDIS_URL`: Use `${{Redis.REDIS_URL}}` for complete Redis connection string
    - `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.: Your LLM provider API keys
-   - `DATABASE_URL`: Automatically set by Railway PostgreSQL plugin
-   - `REDIS_URL`: Automatically set by Railway Redis plugin
 4. The `railway.toml` file automatically configures the build and deployment settings
+5. LiteLLM will not start without proper PostgreSQL and Redis connections
 
 ## Troubleshooting
 
@@ -208,10 +221,13 @@ docker run -p 4000:4000 \
 - Use the health check endpoint to verify the service is running
 - Check service logs for authentication errors
 
-### Connection Refused
-- Verify the LiteLLM service is running and listening on port 4000
+### Connection Refused or Service Won't Start
+- **Critical**: Verify PostgreSQL and Redis services are running first
+- Check that `DATABASE_URL` environment variable is properly set
+- Verify Redis connection variables (`REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`) are configured
+- Check LiteLLM logs for database connection errors
+- Ensure the LiteLLM service is listening on port 4000
 - For service-to-service communication, ensure internal DNS is properly configured (`litellm.railway.internal`)
-- Check that dependent services (PostgreSQL, Redis) are running if configured
 
 ### Performance Issues
 - Monitor database query performance if using PostgreSQL for caching

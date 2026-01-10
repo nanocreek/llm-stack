@@ -39,12 +39,13 @@ model_list:
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
   
-  # Database settings (optional - requires DATABASE_URL)
-  # database_url: os.environ/DATABASE_URL
+  # Database settings for caching and logging
+  database_url: os.environ/DATABASE_URL
   
-  # Redis settings (optional - requires REDIS_URL)
-  # redis_host: os.environ/REDIS_HOST
-  # redis_port: os.environ/REDIS_PORT
+  # Redis settings for distributed caching and rate limiting
+  redis_host: os.environ/REDIS_HOST
+  redis_port: os.environ/REDIS_PORT
+  redis_password: os.environ/REDIS_PASSWORD
 
 litellm_settings:
   success_callback: []

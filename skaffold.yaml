@@ -4,6 +4,8 @@ metadata:
   name: llm-stack
 
 build:
+  local:
+    push: false
   artifacts:
     # React Client
     - image: llm-stack/react-client
@@ -53,6 +55,7 @@ deploy:
   kustomize:
     paths:
       - k8s/overlays/dev
+    defaultNamespace: llm-stack
 
 portForward:
   # React Client

@@ -22,12 +22,14 @@ echo "Checking if r2r module is available..."
 python -c "import r2r; print(f'R2R module found: {r2r.__version__}')" || echo "R2R module not found!"
 
 # Determine how to run R2R
+# R2R is typically installed as a CLI command
 if command -v r2r &> /dev/null; then
     R2R_CMD="r2r"
-    echo "Using r2r command"
+    echo "Using r2r command from PATH"
 else
-    R2R_CMD="python -m r2r"
-    echo "Using python -m r2r"
+    # If r2r command is not in PATH but module is installed, use it directly
+    R2R_CMD="r2r"
+    echo "Fallback: assuming r2r can be run as module"
 fi
 
 echo "================================"

@@ -129,6 +129,9 @@ build_images() {
 deploy_kubernetes() {
     print_header "Deploying to Kubernetes"
     
+    # Create namespace first
+    kubectl create namespace llm-stack --dry-run=client -o yaml | kubectl apply -f -
+    
     # Apply Kubernetes manifests using Kustomize
     kubectl apply -k k8s/overlays/dev
     
@@ -192,15 +195,38 @@ main() {
     echo -e "\n${GREEN}╔════════════════════════════════════════╗"
     echo "║  ✓ Deployment Complete!               ║"
     echo "║                                        ║"
-    echo "║  Next steps:                           ║"
-    echo "║  1. Run port forwarding:               ║"
-    echo "║     skaffold dev --port-forward        ║"
+    echo "║  Starting port forwarding...           ║"
+    echo "╚════════════════════════════════════════╝${NC}\n"
+}
+
+main() {
+    echo -e "${BLUE}"
+    echo "╔════════════════════════════════════════╗"
+    echo "║  LLM Stack - Minikube Development      ║"
+    echo "║  Setup and Deployment Script           ║"
+    echo "╚════════════════════════════════════════╝"
+    echo -e "${NC}"
+    
+    check_prerequisites
+    start_minikube
+    setup_docker
+    build_images
+    deploy_kubernetes
+    wait_for_deployments
+    show_deployment_info
+    
+    echo -e "\n${GREEN}╔════════════════════════════════════════╗"
+    echo "║  ✓ Deployment Complete!               ║"
     echo "║                                        ║"
-    echo "║  2. Open http://localhost:3000 in     ║"
-    echo "║     your web browser                   ║"
+    echo "║  To start port forwarding, run:        ║"
+    echo "║  skaffold dev --port-forward           ║"
     echo "║                                        ║"
-    echo "║  3. Check MINIKUBE_DEV_SETUP.md for   ║"
-    echo "║     detailed documentation            ║"
+    echo "║  Services will be available at:        ║"
+    echo "║  http://localhost:3000 (React)         ║"
+    echo "║  http://localhost:8080 (OpenWebUI)     ║"
+    echo "║  http://localhost:4000 (LiteLLM)       ║"
+    echo "║  http://localhost:7272 (R2R)           ║"
+    echo "║  http://localhost:6333 (Qdrant)        ║"
     echo "╚════════════════════════════════════════╝${NC}\n"
 }
 

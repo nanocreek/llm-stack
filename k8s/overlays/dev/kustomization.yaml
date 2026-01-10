@@ -12,6 +12,20 @@ commonLabels:
   env: development
   managed-by: skaffold
 
+# Configure image replacement to work with skaffold's image tagging
+# Skaffold will replace these with actual built image digests/tags
+images:
+  - name: llm-stack/react-client
+    newName: llm-stack/react-client
+  - name: llm-stack/r2r
+    newName: llm-stack/r2r
+  - name: llm-stack/qdrant
+    newName: llm-stack/qdrant
+  - name: llm-stack/litellm
+    newName: llm-stack/litellm
+  - name: llm-stack/openwebui
+    newName: llm-stack/openwebui
+
 secretGenerator:
   - name: litellm-secret
     literals:
@@ -28,7 +42,7 @@ patchesJson6902:
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
-        value: Never
+        value: IfNotPresent
   - target:
       group: apps
       version: v1
@@ -37,7 +51,7 @@ patchesJson6902:
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
-        value: Never
+        value: IfNotPresent
   - target:
       group: apps
       version: v1
@@ -46,7 +60,7 @@ patchesJson6902:
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
-        value: Never
+        value: IfNotPresent
   - target:
       group: apps
       version: v1
@@ -55,7 +69,7 @@ patchesJson6902:
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
-        value: Never
+        value: IfNotPresent
   - target:
       group: apps
       version: v1
@@ -64,4 +78,4 @@ patchesJson6902:
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
-        value: Never
+        value: IfNotPresent

@@ -14,19 +14,6 @@ spec:
       labels:
         app: r2r
     spec:
-      initContainers:
-      - name: wait-for-postgres
-        image: postgres:15-alpine
-        command:
-          - sh
-          - -c
-          - until pg_isready -h postgres -p 5432 -U postgres; do echo waiting for postgres; sleep 2; done
-      - name: wait-for-qdrant
-        image: curlimages/curl:latest
-        command:
-          - sh
-          - -c
-          - until curl -f http://qdrant:6333/health; do echo waiting for qdrant; sleep 2; done
       containers:
       - name: r2r
         image: llm-stack/r2r:latest
@@ -53,7 +40,7 @@ spec:
         - name: R2R_POSTGRES_DBNAME
           value: "r2r_db"
         - name: R2R_QDRANT_HOST
-          value: "qdrant"
+          value: "dev-qdrant"
         - name: R2R_QDRANT_PORT
           value: "6333"
         - name: REDIS_URL

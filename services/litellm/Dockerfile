@@ -1,5 +1,5 @@
-# LiteLLM service using official Docker image
-FROM ghcr.io/berriai/litellm:main-latest
+# LiteLLM service using official Docker imagedocker pull litellm/litellm:v1.80.8-stable.1-patch01
+FROM docker.litellm.ai/berriai/litellm:v1.80.8-stable
 
 WORKDIR /app
 
@@ -14,4 +14,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:4000/health || exit 1
 
 # Start LiteLLM server with config
-CMD ["litellm", "--config", "/app/config.yaml", "--host", "0.0.0.0", "--port", "4000"]
+CMD ["--config", "/app/config/config.yaml", "--host", "0.0.0.0", "--port", "4000"]

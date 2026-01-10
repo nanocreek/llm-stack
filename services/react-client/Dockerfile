@@ -23,7 +23,7 @@ RUN npm run build
 # Stage 2: Production nginx server
 FROM nginx:alpine
 
-# Copy nginx configuration using heredoc
+# Copy server configuration
 RUN cat > /etc/nginx/conf.d/default.conf <<'EOF'
 server {
     listen 3000;

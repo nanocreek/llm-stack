@@ -1,0 +1,103 @@
+[0;34m
+╔════════════════════════════════════════╗
+║  LLM Stack - Minikube Development      ║
+║  Setup and Deployment Script           ║
+╚════════════════════════════════════════╝
+[0m
+
+[0;34m=== Checking Prerequisites ===[0m
+
+[0;32m✓ Docker is installed: Docker version 28.4.0, build d8eb465[0m
+[0;32m✓ Minikube is installed: v1.36.0[0m
+[0;32m✓ kubectl is installed: [0m
+[0;32m✓ Skaffold is installed: v2.16.1[0m
+
+[0;34m=== Starting Minikube ===[0m
+
+[0;32m✓ Minikube is already running[0m
+[0;32m✓ Kubernetes cluster is accessible[0m
+
+[0;34m=== Setting Up Docker Environment ===[0m
+
+[0;32m✓ Docker environment configured for Minikube[0m
+
+[0;34m=== Building Docker Images ===[0m
+
+Building images using Skaffold...
+Generating tags...
+ - llm-stack/react-client -> llm-stack/react-client:f2b4a1a
+ - llm-stack/r2r -> llm-stack/r2r:f2b4a1a
+ - llm-stack/qdrant -> llm-stack/qdrant:f2b4a1a
+ - llm-stack/litellm -> llm-stack/litellm:f2b4a1a-dirty
+ - llm-stack/openwebui -> llm-stack/openwebui:f2b4a1a-dirty
+Checking cache...
+ - llm-stack/react-client: Found Locally
+ - llm-stack/r2r: Found Locally
+ - llm-stack/qdrant: Found Locally
+ - llm-stack/litellm: Not found. Building
+ - llm-stack/openwebui: Not found. Building
+Starting build...
+Found [minikube] context, using local docker daemon.
+Building [llm-stack/openwebui]...
+Sending build context to Docker daemon  2.048kB
+Step 1/5 : FROM ghcr.io/open-webui/open-webui:main
+ ---> b74e4892e540
+Step 2/5 : WORKDIR /app
+ ---> Using cache
+ ---> 5c197f9097d3
+Step 3/5 : RUN git init /app
+ ---> Using cache
+ ---> b512af437e57
+Step 4/5 : RUN mkdir -p /home/user &&     chown -R 1000:1000 /home/user
+ ---> Using cache
+ ---> 55dd7023168e
+Step 5/5 : EXPOSE 8080
+ ---> Using cache
+ ---> 90ce9c58486d
+Successfully built 90ce9c58486d
+Successfully tagged llm-stack/openwebui:f2b4a1a-dirty
+Build [llm-stack/openwebui] succeeded
+Building [llm-stack/litellm]...
+Sending build context to Docker daemon   5.12kB
+Step 1/6 : FROM docker.litellm.ai/berriai/litellm:v1.80.8-stable
+ ---> 0cef282a0c6d
+Step 2/6 : WORKDIR /app
+ ---> Using cache
+ ---> 30c65a172ab3
+Step 3/6 : COPY config.yaml /app/config.yaml
+ ---> Using cache
+ ---> d37085220868
+Step 4/6 : EXPOSE 4000
+ ---> Using cache
+ ---> 40f1f95a2a62
+Step 5/6 : HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3     CMD curl -f http://localhost:4000/health || exit 1
+ ---> Using cache
+ ---> 0fbdb1285f7b
+Step 6/6 : CMD ["--config", "/app/config/config.yaml", "--host", "0.0.0.0", "--port", "4000"]
+ ---> Using cache
+ ---> d4a97561684b
+Successfully built d4a97561684b
+Successfully tagged llm-stack/litellm:f2b4a1a-dirty
+Build [llm-stack/litellm] succeeded
+
+[0;32m✓ All Docker images built successfully[0m
+
+[0;34m=== Deploying to Kubernetes ===[0m
+
+# Warning: 'bases' is deprecated. Please use 'resources' instead. Run 'kustomize edit fix' to update your Kustomization automatically.
+# Warning: 'commonLabels' is deprecated. Please use 'labels' instead. Run 'kustomize edit fix' to update your Kustomization automatically.
+# Warning: 'patchesJson6902' is deprecated. Please use 'patches' instead. Run 'kustomize edit fix' to update your Kustomization automatically.
+# Warning: 'commonLabels' is deprecated. Please use 'labels' instead. Run 'kustomize edit fix' to update your Kustomization automatically.
+# Warning: 'patchesStrategicMerge' is deprecated. Please use 'patches' instead. Run 'kustomize edit fix' to update your Kustomization automatically.
+Error from server (NotFound): error when creating "k8s/overlays/dev": namespaces "llm-stack" not found
+Error from server (NotFound): error when creating "k8s/overlays/dev": namespaces "llm-stack" not found
+Error from server (NotFound): error when creating "k8s/overlays/dev": namespaces "llm-stack" not found
+Error from server (NotFound): error when creating "k8s/overlays/dev": namespaces "llm-stack" not found
+Error from server (NotFound): error when creating "k8s/overlays/dev": namespaces "llm-stack" not found
+Error from server (NotFound): error when creating "k8s/overlays/dev": namespaces "llm-stack" not found
+Error from server (NotFound): error when creating "k8s/overlays/dev": namespaces "llm-stack" not found
+Error from server (NotFound): error when creating "k8s/overlays/dev": namespaces "llm-stack" not found
+Error from server (NotFound): error when creating "k8s/overlays/dev": namespaces "llm-stack" not found
+Error from server (NotFound): error when creating "k8s/overlays/dev": namespaces "llm-stack" not found
+Error from server (NotFound): error when creating "k8s/overlays/dev": namespaces "llm-stack" not found
+Error from server (NotFound): error when creating "k8s/overlays/dev": namespaces "llm-stack" not found

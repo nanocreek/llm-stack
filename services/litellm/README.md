@@ -34,20 +34,20 @@ The service requires the following environment variables, which are automaticall
 
 ## Dependencies
 
-LiteLLM requires the following services for full functionality:
+LiteLLM can run standalone but optionally supports the following services for enhanced functionality:
 
-1. **PostgreSQL** - Required for persistent caching, API call logging, and request tracking
-2. **Redis** - Required for distributed caching, rate limiting, and session management
+1. **PostgreSQL** (Optional) - Provides persistent caching, API call logging, and request tracking
+2. **Redis** (Optional) - Enables distributed caching, rate limiting, and session management
 
-Both services must be running and properly configured for LiteLLM to start successfully.
+By default, LiteLLM starts without these connections to allow quick deployment and testing. To enable them, see [SETUP_DATABASE_REDIS.md](./SETUP_DATABASE_REDIS.md).
 
 ## Dockerfile
 
 The Dockerfile uses:
-- `python:3.11-slim` base image for minimal size
-- Installs LiteLLM and required dependencies via pip
-- Includes health check for automatic monitoring
-- Graceful error handling for optional config files
+- Official LiteLLM image `ghcr.io/berriai/litellm:main-latest`
+- Includes all dependencies pre-installed (PostgreSQL, Redis clients)
+- Health check for automatic monitoring
+- Configuration via mounted config file
 
 ## Service-to-Service Communication
 
@@ -183,7 +183,13 @@ To run the container directly:
 # Build the Docker image
 docker build -t litellm:latest ./services/litellm
 
-# Run the container with database and Redis
+# Run without database/Redis (default)
+docker run -p 4000:4000 \
+  -e LITELLM_MASTER_KEY=dev-key \
+  -e OPENAI_API_KEY=sk-... \
+  litellm:latest
+
+# Or run with database and Redis (when available)
 docker run -p 4000:4000 \
   -e LITELLM_MASTER_KEY=dev-key \
   -e DATABASE_URL=postgresql://user:pass@host:5432/litellm \
@@ -194,20 +200,30 @@ docker run -p 4000:4000 \
   litellm:latest
 ```
 
+You can also use the official image directly:
+
+```bash
+docker run -p 4000:4000 \
+  -v $(pwd)/config.yaml:/app/config.yaml \
+  -e LITELLM_MASTER_KEY=dev-key \
+  -e OPENAI_API_KEY=sk-... \
+  ghcr.io/berriai/litellm:main-latest \
+  --config /app/config.yaml
+```
+
 ## Deployment on Railway
 
 1. Add the LiteLLM service to your Railway project
-2. **Required**: Add PostgreSQL and Redis plugins to your project
-3. Set the following environment variables in your LiteLLM service:
+2. Set the following environment variables in your LiteLLM service:
    - `LITELLM_MASTER_KEY`: A strong, unique key for API authentication
-   - `DATABASE_URL`: Use `${{Postgres.DATABASE_URL}}` to auto-reference PostgreSQL
-   - `REDIS_HOST`: Use `${{Redis.REDIS_HOST}}` to auto-reference Redis host
-   - `REDIS_PORT`: Use `${{Redis.REDIS_PORT}}` to auto-reference Redis port
-   - `REDIS_PASSWORD`: Use `${{Redis.REDIS_PASSWORD}}` to auto-reference Redis password
-   - `REDIS_URL`: Use `${{Redis.REDIS_URL}}` for complete Redis connection string
    - `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.: Your LLM provider API keys
+3. **(Optional)** For production use, add PostgreSQL and Redis plugins:
+   - `DATABASE_URL`: Use `${{Postgres.DATABASE_URL}}`
+   - `REDIS_HOST`: Use `${{Redis.REDIS_HOST}}`
+   - `REDIS_PORT`: Use `${{Redis.REDIS_PORT}}`
+   - `REDIS_PASSWORD`: Use `${{Redis.REDIS_PASSWORD}}`
+   - See [SETUP_DATABASE_REDIS.md](./SETUP_DATABASE_REDIS.md) for full setup instructions
 4. The `railway.toml` file automatically configures the build and deployment settings
-5. LiteLLM will not start without proper PostgreSQL and Redis connections
 
 ## Troubleshooting
 
@@ -222,12 +238,11 @@ docker run -p 4000:4000 \
 - Check service logs for authentication errors
 
 ### Connection Refused or Service Won't Start
-- **Critical**: Verify PostgreSQL and Redis services are running first
-- Check that `DATABASE_URL` environment variable is properly set
-- Verify Redis connection variables (`REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`) are configured
-- Check LiteLLM logs for database connection errors
 - Ensure the LiteLLM service is listening on port 4000
+- Check LiteLLM logs for startup errors
+- Verify `LITELLM_MASTER_KEY` is set
 - For service-to-service communication, ensure internal DNS is properly configured (`litellm.railway.internal`)
+- If using PostgreSQL/Redis, verify they are running and accessible (see [SETUP_DATABASE_REDIS.md](./SETUP_DATABASE_REDIS.md))
 
 ### Performance Issues
 - Monitor database query performance if using PostgreSQL for caching

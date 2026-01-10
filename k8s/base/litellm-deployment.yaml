@@ -31,14 +31,16 @@ spec:
             secretKeyRef:
               name: litellm-secret
               key: master-key
-        - name: DATABASE_URL
-          value: "postgresql://postgres:postgres@postgres:5432/litellm"
-        - name: REDIS_HOST
-          value: "redis"
-        - name: REDIS_PORT
-          value: "6379"
-        - name: REDIS_PASSWORD
-          value: ""
+        # Optional: Uncomment when PostgreSQL is available
+        # - name: DATABASE_URL
+        #   value: "postgresql://postgres:postgres@postgres:5432/litellm"
+        # Optional: Uncomment when Redis is available
+        # - name: REDIS_HOST
+        #   value: "redis"
+        # - name: REDIS_PORT
+        #   value: "6379"
+        # - name: REDIS_PASSWORD
+        #   value: ""
         - name: OPENAI_API_KEY
           valueFrom:
             secretKeyRef:

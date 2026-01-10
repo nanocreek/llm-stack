@@ -10,9 +10,9 @@ RUN mkdir -p /home/user && \
 # Expose port 8080
 EXPOSE 8080
 
-# Health check - checks the root endpoint
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8080/ || exit 1
+# Health check - targeting the dedicated /health endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
 
 # OpenWebUI starts by default
 CMD ["bash", "-c", "python3 -m uvicorn main:app --host 0.0.0.0 --port 8080"]

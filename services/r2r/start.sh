@@ -27,9 +27,9 @@ if command -v r2r &> /dev/null; then
     R2R_CMD="r2r"
     echo "Using r2r command from PATH"
 else
-    # If r2r command is not in PATH but module is installed, use it directly
-    R2R_CMD="r2r"
-    echo "Fallback: assuming r2r can be run as module"
+    # If r2r command is not in PATH but module is installed, use Python module
+    R2R_CMD="python -m r2r"
+    echo "Fallback: using 'python -m r2r' to run R2R module"
 fi
 
 echo "================================"
@@ -37,8 +37,8 @@ echo "Environment variables:"
 env | grep -E "(PORT|R2R_|POSTGRES|QDRANT)" | sort
 echo "================================"
 
-# Set defaults
-export ACTUAL_PORT="${PORT:-${R2R_PORT:-7272}}"
+# Set defaults - prioritize R2R_PORT over generic PORT
+export ACTUAL_PORT="${R2R_PORT:-7272}"
 export ACTUAL_HOST="${R2R_HOST:-0.0.0.0}"
 
 echo "Will bind to: ${ACTUAL_HOST}:${ACTUAL_PORT}"

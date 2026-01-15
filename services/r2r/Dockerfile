@@ -14,8 +14,13 @@ RUN apt-get update && apt-get install -y \
 # Install R2R framework with all dependencies
 RUN pip install --no-cache-dir r2r uvicorn[standard]
 
-# Verify R2R installation
-RUN r2r --version || echo "WARNING: r2r command not found!"
+# Ensure pip bin directory is in PATH
+ENV PATH="/usr/local/bin:${PATH}"
+
+# Verify R2R installation and find where it's installed
+RUN echo "Checking R2R installation..." && \
+    which r2r || find /usr/local -name "r2r" -type f 2>/dev/null || echo "R2R CLI not found in expected locations" && \
+    python -c "import r2r; print(f'R2R module version: {r2r.__version__}')"
 
 # Create R2R configuration directory
 RUN mkdir -p /app/config /app/data

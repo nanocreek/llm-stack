@@ -81,35 +81,32 @@ export QDRANT_PORT="${R2R_QDRANT_PORT:-6333}"
 # Create R2R config
 echo "Creating R2R configuration..."
 mkdir -p /app/config
-cat > /app/config/r2r.json <<'EOF'
-{
-  "app": {
-    "max_logs_per_request": 100
-  },
-  "completions": {
-    "provider": "litellm",
-    "litellm_base_url": "http://litellm.railway.internal:4000"
-  },
-  "database": {
-    "provider": "postgres"
-  },
-  "vector_database": {
-    "provider": "qdrant",
-    "collection_name": "r2r_default"
-  }
-}
+cat > /app/config/r2r.toml <<'EOF'
+[app]
+max_logs_per_request = 100
+
+[completions]
+provider = "litellm"
+litellm_base_url = "http://litellm.railway.internal:4000"
+
+[database]
+provider = "postgres"
+
+[vector_database]
+provider = "qdrant"
+collection_name = "r2r_default"
 EOF
 
 echo "Configuration created:"
-cat /app/config/r2r.json
+cat /app/config/r2r.toml
 
 echo "================================"
 echo "Starting R2R server..."
-echo "Command: ${R2R_CMD} serve --host ${ACTUAL_HOST} --port ${ACTUAL_PORT} --config-path /app/config/r2r.json"
+echo "Command: ${R2R_CMD} serve --host ${ACTUAL_HOST} --port ${ACTUAL_PORT} --config-path /app/config/r2r.toml"
 echo "================================"
 
 # Start R2R using Python module invocation
 exec python -m r2r.serve \
   --host "${ACTUAL_HOST}" \
   --port "${ACTUAL_PORT}" \
-  --config-path /app/config/r2r.json
+  --config-path /app/config/r2r.toml

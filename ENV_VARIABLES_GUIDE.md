@@ -84,11 +84,23 @@ REDIS_URL=${{Redis.REDIS_URL}}
 PORT=8080
 OPENAI_API_BASE_URL=http://litellm.railway.internal:4000/v1
 OPENAI_API_KEY=sk-1234567890abcdef
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+REDIS_URL=${{Redis.REDIS_URL}}
 WEBUI_AUTH=false
+WEBUI_SECRET_KEY=your_secret_key_here
+VECTOR_DB=qdrant
+QDRANT_URI=http://qdrant.railway.internal:6333
+QDRANT_HOST=qdrant.railway.internal
+QDRANT_PORT=6333
 ```
 
-**⚠️ IMPORTANT:** 
+**⚠️ IMPORTANT:**
 - Replace `sk-1234567890abcdef` with the SAME `LITELLM_MASTER_KEY` value you used in the LiteLLM service
+- Replace `your_secret_key_here` with a strong random secret key (e.g., generated with `openssl rand -base64 32`)
+- `VECTOR_DB` configures the vector database backend (uses Qdrant for RAG operations)
+- **`QDRANT_URI` is REQUIRED when `VECTOR_DB=qdrant`** - This is the complete connection URI in format `http://qdrant.railway.internal:6333`
+- `QDRANT_HOST` and `QDRANT_PORT` are kept for backward compatibility but `QDRANT_URI` is what OpenWebUI actually uses
+- `DATABASE_URL` and `REDIS_URL` are provided by Railway's PostgreSQL and Redis plugins
 
 ---
 

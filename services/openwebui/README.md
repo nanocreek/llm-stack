@@ -50,6 +50,10 @@ The following environment variables are required for OpenWebUI to function prope
 | `SESSION_COOKIE_SECURE` | Default: `false` | No | Set secure cookies (true in production) |
 | `WEBUI_SECRET_KEY` | Required | Yes | Secret key for session encryption |
 | `WEBUI_NAME` | Default: `OpenWebUI` | No | Display name for the application |
+| `VECTOR_DB` | Default: `qdrant` | Yes (for RAG) | Vector database provider for embeddings |
+| `QDRANT_URI` | `http://qdrant.railway.internal:6333` | Yes (if VECTOR_DB=qdrant) | Complete Qdrant connection URI |
+| `QDRANT_HOST` | `qdrant.railway.internal` | No | Qdrant host (kept for compatibility) |
+| `QDRANT_PORT` | `6333` | No | Qdrant port (kept for compatibility) |
 
 ## Dependencies
 
@@ -216,6 +220,35 @@ The service uses the following restart configuration:
 This ensures the service automatically restarts if it crashes, with a maximum of 10 restart attempts.
 
 ## Troubleshooting
+
+### QDRANT_URI Configuration Error
+
+If you see `ValueError: QDRANT_URI is not set` in the logs:
+
+1. **Verify `QDRANT_URI` is set in your environment variables:**
+   - Go to Railway service configuration for OpenWebUI
+   - Check the Variables tab
+   - Ensure `QDRANT_URI=http://qdrant.railway.internal:6333` is set
+   
+2. **Understand why this is required:**
+   - OpenWebUI's QdrantClient requires a complete pre-constructed URI string
+   - Unlike R2R which constructs the connection from separate host/port, OpenWebUI expects the full URI
+   
+3. **Correct format for Railway internal DNS:**
+   - Protocol: `http://` (Qdrant HTTP REST API)
+   - Hostname: `qdrant.railway.internal` (Railway internal service DNS)
+   - Port: `6333` (Qdrant HTTP API port)
+   - Full URI: `http://qdrant.railway.internal:6333`
+
+4. **Additional configuration:**
+   - Keep `QDRANT_HOST=qdrant.railway.internal` (for reference)
+   - Keep `QDRANT_PORT=6333` (for reference)
+   - Most importantly: **Set `QDRANT_URI`** (this is what OpenWebUI actually uses)
+
+5. **Verify Qdrant is running:**
+   - Check Railway project dashboard
+   - Qdrant service should show 🟢 Healthy status
+   - OpenWebUI will fail to start if Qdrant is not accessible
 
 ### Connection Refused
 

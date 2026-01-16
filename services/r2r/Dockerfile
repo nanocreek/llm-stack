@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install R2R framework with all dependencies
-RUN pip install --no-cache-dir r2r uvicorn[standard]
+RUN pip install --no-cache-dir 'r2r[core]' uvicorn[standard]
 
 # Ensure pip bin directory is in PATH
 ENV PATH="/usr/local/bin:${PATH}"

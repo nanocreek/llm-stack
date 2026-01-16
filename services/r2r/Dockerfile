@@ -19,7 +19,7 @@ ENV PATH="/usr/local/bin:${PATH}"
 
 # Verify R2R installation
 RUN echo "Checking R2R installation..." && \
-    python -m r2r --help && \
+    python -m r2r.serve --help && \
     python -c "import r2r; print(f'R2R module version: {r2r.__version__}')"
 
 # Create R2R configuration directory

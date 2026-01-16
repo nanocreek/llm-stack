@@ -148,8 +148,9 @@ services:
   - Conditional checks (skips if environment variable not set)
 
 **Wrong R2R Command**:
-- The correct command is `r2r serve --host 0.0.0.0 --port 7272 --config-path /app/config/r2r.json`
-- Must include `serve` subcommand and `--config-path` for proper initialization
+- The correct command is `python -m r2r.serve --host 0.0.0.0 --port 7272 --config-path /app/config/r2r.json`
+- Must use dot notation: `python -m r2r.serve` (not `python -m r2r serve`)
+- Must include `--config-path` for proper initialization
 
 **Connection Refused**: 
 - Ensure PostgreSQL, Qdrant, and Redis are running and accessible

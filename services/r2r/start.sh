@@ -109,7 +109,7 @@ echo "Command: ${R2R_CMD} serve --host ${ACTUAL_HOST} --port ${ACTUAL_PORT} --co
 echo "================================"
 
 # Start R2R using Python module invocation
-exec python -m r2r serve \
+exec python -m r2r.serve \
   --host "${ACTUAL_HOST}" \
   --port "${ACTUAL_PORT}" \
   --config-path /app/config/r2r.json

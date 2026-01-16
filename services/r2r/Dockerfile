@@ -17,9 +17,9 @@ RUN pip install --no-cache-dir r2r uvicorn[standard]
 # Ensure pip bin directory is in PATH
 ENV PATH="/usr/local/bin:${PATH}"
 
-# Verify R2R installation and find where it's installed
+# Verify R2R installation
 RUN echo "Checking R2R installation..." && \
-    which r2r || find /usr/local -name "r2r" -type f 2>/dev/null || echo "R2R CLI not found in expected locations" && \
+    python -m r2r --help && \
     python -c "import r2r; print(f'R2R module version: {r2r.__version__}')"
 
 # Create R2R configuration directory

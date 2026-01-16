@@ -22,21 +22,9 @@ echo "Checking if r2r module is available..."
 python -c "import r2r; print(f'R2R module found: {r2r.__version__}')" || echo "R2R module not found!"
 
 # Determine how to run R2R
-# Check common locations for the r2r CLI
-if command -v r2r &> /dev/null; then
-    R2R_CMD="r2r"
-    echo "Using r2r command from PATH"
-elif [ -f "/usr/local/bin/r2r" ]; then
-    R2R_CMD="/usr/local/bin/r2r"
-    echo "Using r2r from /usr/local/bin/r2r"
-elif [ -f "/root/.local/bin/r2r" ]; then
-    R2R_CMD="/root/.local/bin/r2r"
-    echo "Using r2r from /root/.local/bin/r2r"
-else
-    # Try to find r2r using Python's site-packages scripts
-    R2R_CMD=$(python -c "import sys; import os; scripts_dir = os.path.join(sys.prefix, 'bin', 'r2r'); print(scripts_dir if os.path.exists(scripts_dir) else 'r2r')" 2>/dev/null || echo "r2r")
-    echo "Fallback: trying to use r2r CLI (${R2R_CMD})"
-fi
+# Use Python module invocation since r2r doesn't install a standalone CLI executable
+R2R_CMD="python -m r2r"
+echo "Using R2R via Python module invocation"
 
 echo "================================"
 echo "Environment variables:"
@@ -120,8 +108,8 @@ echo "Starting R2R server..."
 echo "Command: ${R2R_CMD} serve --host ${ACTUAL_HOST} --port ${ACTUAL_PORT} --config-path /app/config/r2r.json"
 echo "================================"
 
-# Start R2R using the determined command
-exec ${R2R_CMD} serve \
+# Start R2R using Python module invocation
+exec python -m r2r serve \
   --host "${ACTUAL_HOST}" \
   --port "${ACTUAL_PORT}" \
   --config-path /app/config/r2r.json

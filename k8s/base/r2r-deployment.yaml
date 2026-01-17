@@ -27,7 +27,7 @@ spec:
         - name: R2R_HOST
           value: "0.0.0.0"
         - name: R2R_POSTGRES_HOST
-          value: "postgres-postgresql"
+          value: "dev-postgres"
         - name: R2R_POSTGRES_PORT
           value: "5432"
         - name: R2R_POSTGRES_USER
@@ -35,8 +35,8 @@ spec:
         - name: R2R_POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: postgres-postgresql
-              key: postgres-password
+              name: postgres-secret
+              key: password
         - name: R2R_POSTGRES_DBNAME
           value: "r2r_db"
         - name: R2R_QDRANT_HOST

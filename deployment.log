@@ -101,3 +101,70 @@ Error from server (NotFound): error when creating "k8s/overlays/dev": namespaces
 Error from server (NotFound): error when creating "k8s/overlays/dev": namespaces "llm-stack" not found
 Error from server (NotFound): error when creating "k8s/overlays/dev": namespaces "llm-stack" not found
 Error from server (NotFound): error when creating "k8s/overlays/dev": namespaces "llm-stack" not found
+Generating tags...
+ - llm-stack/react-client -> llm-stack/react-client:f69fd8d
+ - llm-stack/r2r -> llm-stack/r2r:f69fd8d-dirty
+ - llm-stack/qdrant -> llm-stack/qdrant:f69fd8d
+ - llm-stack/litellm -> llm-stack/litellm:f69fd8d
+ - llm-stack/openwebui -> llm-stack/openwebui:f69fd8d-dirty
+Checking cache...
+ - llm-stack/react-client: Found Locally
+ - llm-stack/r2r: Found Locally
+ - llm-stack/qdrant: Found Locally
+ - llm-stack/litellm: Found Locally
+ - llm-stack/openwebui: Found Locally
+Tags used in deployment:
+ - llm-stack/react-client -> llm-stack/react-client:ea8c2ca084f18d0203b2e3d507747f69b7ee8ae0e2c2d0a3204159a2bb95e0c1
+ - llm-stack/r2r -> llm-stack/r2r:37f29e7913405b95855cbe61a6c653f6817af1272b53cc7123e5417053201645
+ - llm-stack/qdrant -> llm-stack/qdrant:8e6a3f885f03f4b609f5ae2691e377e60521afed66df0fb3a171b224c1829731
+ - llm-stack/litellm -> llm-stack/litellm:5cd15e2cf18e105e46f6c016517c8cc402a7ad0d379464fc5fcdd92d29789d8e
+ - llm-stack/openwebui -> llm-stack/openwebui:b40713e02ff272becc1aa9fa88ad65030ed924665521c1ebc568826dcc47a6ff
+Starting deploy...
+ - namespace/llm-stack created
+ - configmap/dev-litellm-config created
+ - configmap/dev-postgres-config created
+ - secret/dev-litellm-secret-767k7tgcb9 created
+ - secret/dev-postgres-secret created
+ - service/dev-litellm created
+ - service/dev-openwebui created
+ - service/dev-postgres created
+ - service/dev-qdrant created
+ - service/dev-r2r created
+ - service/dev-react-client created
+ - service/dev-redis created
+ - persistentvolumeclaim/dev-postgres-data created
+ - persistentvolumeclaim/dev-redis-data created
+ - deployment.apps/dev-litellm created
+ - deployment.apps/dev-openwebui created
+ - deployment.apps/dev-qdrant created
+ - deployment.apps/dev-r2r created
+ - deployment.apps/dev-react-client created
+ - statefulset.apps/dev-postgres created
+ - statefulset.apps/dev-redis created
+Waiting for deployments to stabilize...
+I0117 13:44:31.055489  717389 request.go:752] "Waited before sending request" delay="1.179106061s" reason="client-side throttling, not priority and fairness" verb="GET" URL="https://192.168.58.2:8443/api/v1/namespaces/llm-stack/pods?labelSelector=app%3Dreact-client%2Capp.kubernetes.io%2Fpart-of%3Dllm-stack%2Cenv%3Ddevelopment%2Cmanaged-by%3Dskaffold%2Cskaffold.dev%2Frun-id%3Daf985910-5472-4aef-b31f-9f22f14f27aa"
+ - llm-stack:deployment/dev-litellm: waiting for rollout to finish: 0 of 1 updated replicas are available...
+ - llm-stack:deployment/dev-openwebui: waiting for rollout to finish: 0 of 1 updated replicas are available...
+ - llm-stack:deployment/dev-qdrant: waiting for rollout to finish: 0 of 1 updated replicas are available...
+ - llm-stack:deployment/dev-r2r: waiting for rollout to finish: 0 of 1 updated replicas are available...
+ - llm-stack:deployment/dev-react-client: waiting for rollout to finish: 0 of 1 updated replicas are available...
+ - llm-stack:statefulset/dev-postgres: Waiting for 1 pods to be ready...
+ - llm-stack:statefulset/dev-redis: Waiting for 1 pods to be ready...
+ - llm-stack:statefulset/dev-redis is ready. [6/7 deployment(s) still pending]
+ - llm-stack:deployment/dev-qdrant is ready. [5/7 deployment(s) still pending]
+ - llm-stack:statefulset/dev-postgres is ready. [4/7 deployment(s) still pending]
+ - llm-stack:deployment/dev-litellm is ready. [3/7 deployment(s) still pending]
+ - llm-stack:deployment/dev-openwebui is ready. [2/7 deployment(s) still pending]
+Deployments stabilized in 58.29 seconds
+Port forwarding service/redis-master in namespace llm-stack, remote port 6379 -> http://127.0.0.1:6379
+Port forwarding service/postgres in namespace llm-stack, remote port 5432 -> http://127.0.0.1:5432
+Port forwarding deployment/dev-litellm in namespace llm-stack, remote port 4000 -> http://127.0.0.1:4000
+Port forwarding deployment/dev-react-client in namespace llm-stack, remote port 3000 -> http://127.0.0.1:3000
+Port forwarding deployment/dev-openwebui in namespace llm-stack, remote port 8080 -> http://127.0.0.1:8080
+Port forwarding deployment/dev-qdrant in namespace llm-stack, remote port 6333 -> http://127.0.0.1:6333
+Port forwarding deployment/dev-r2r in namespace llm-stack, remote port 7272 -> http://127.0.0.1:7272
+time="2026-01-17T13:45:24+02:00" level=warning msg="could not map pods to service llm-stack/redis-master/6379: getting service llm-stack/redis-master: client rate limiter Wait returned an error: context canceled" subtask=service/redis-master task=PortForward
+time="2026-01-17T13:45:24+02:00" level=warning msg="could not map pods to service llm-stack/postgres/5432: getting service llm-stack/postgres: client rate limiter Wait returned an error: context canceled" subtask=service/postgres task=PortForward
+Listing files to watch...
+ - llm-stack/react-client
+

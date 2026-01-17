@@ -52,10 +52,12 @@ if [ -n "${R2R_POSTGRES_HOST}" ]; then
   # Create pgvector extension after PostgreSQL is ready
   echo "================================"
   echo "Setting up pgvector extension..."
+  # Use PGPASSWORD environment variable to avoid password prompts
+  export PGPASSWORD="${R2R_POSTGRES_PASSWORD}"
   PSQL_COMMAND="psql -h ${R2R_POSTGRES_HOST} -p ${R2R_POSTGRES_PORT:-5432} -U ${R2R_POSTGRES_USER:-postgres} -d ${R2R_POSTGRES_DBNAME:-postgres}"
   
-  # Attempt to create the pgvector extension
-  if ${PSQL_COMMAND} -c "CREATE EXTENSION IF NOT EXISTS vector;" 2>&1 | tee /tmp/pgvector_setup.log; then
+  # Attempt to create the required extensions (uuid-ossp for UUIDs, vector for pgvector)
+  if ${PSQL_COMMAND} -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"; CREATE EXTENSION IF NOT EXISTS vector;" 2>&1 | tee /tmp/pgvector_setup.log; then
     echo "✓ pgvector extension setup successful"
   else
     echo "⚠ pgvector extension creation may have failed"
@@ -72,6 +74,7 @@ if [ -n "${R2R_POSTGRES_HOST}" ]; then
       echo "  For Railway with managed PostgreSQL, ensure pgvector addon is enabled"
     fi
   fi
+  unset PGPASSWORD
   echo "================================"
 else
   echo "Skipping PostgreSQL wait (R2R_POSTGRES_HOST not set)"
@@ -213,18 +216,30 @@ def main():
     # Apply the patch before importing r2r.serve
     patch_postgres_module()
     
-    # Now import and run the actual r2r serve
-    from r2r import serve_app
-    from r2r.cli.main import main as r2r_main
+    # Launch R2R using subprocess with the correct arguments
+    # Extract arguments from command line (skip the script name and 'serve')
+    import subprocess
+    import os
+    logger.info("Launching R2R serve command via subprocess")
     
-    logger.info("Launching R2R serve command")
-    # Pass command line arguments through
-    sys.argv[0] = 'r2r'
     try:
-        r2r_main()
-    except KeyboardInterrupt:
-        logger.info("R2R server interrupted")
-        sys.exit(0)
+        # Build the command: python -m r2r.serve [other args]
+        # We need to use r2r.serve module directly which handles the CLI
+        args = sys.argv[1:]  # Skip script name
+        
+        # If first arg is 'serve', keep it; if not, we'll add it
+        if args and args[0] == 'serve':
+            # Remove 'serve' from args and let the module handle it
+            args = args[1:]
+        
+        # Use python -m r2r with the proper args
+        cmd = [sys.executable, '-m', 'r2r.serve'] + args
+        logger.info(f"Executing: {' '.join(cmd)}")
+        logger.info(f"Environment variables set: POSTGRES_HOST={os.environ.get('POSTGRES_HOST')}, POSTGRES_PORT={os.environ.get('POSTGRES_PORT')}, QDRANT_HOST={os.environ.get('QDRANT_HOST')}")
+        # Pass the current environment to subprocess so it inherits all env vars
+        result = subprocess.run(cmd, check=False, env=os.environ.copy())
+        sys.exit(result.returncode)
+        
     except Exception as e:
         logger.error(f"R2R server error: {e}", exc_info=True)
         sys.exit(1)

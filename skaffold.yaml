@@ -38,20 +38,6 @@ build:
         dockerfile: Dockerfile
 
 deploy:
-  helm:
-    releases:
-      - name: postgres
-        remoteChart: bitnami/postgresql
-        valuesFiles:
-          - k8s/helm/postgres-values.yaml
-        namespace: llm-stack
-        createNamespace: true
-      - name: redis
-        remoteChart: bitnami/redis
-        valuesFiles:
-          - k8s/helm/redis-values.yaml
-        namespace: llm-stack
-        createNamespace: true
   kustomize:
     paths:
       - k8s/overlays/dev

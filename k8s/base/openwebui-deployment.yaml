@@ -44,8 +44,9 @@ spec:
           httpGet:
             path: /
             port: 8080
-          initialDelaySeconds: 10
+          initialDelaySeconds: 30
           periodSeconds: 10
+          timeoutSeconds: 5
           failureThreshold: 18
         livenessProbe:
           httpGet:

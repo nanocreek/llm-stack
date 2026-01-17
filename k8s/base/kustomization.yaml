@@ -8,6 +8,12 @@ commonLabels:
   managed-by: kustomize
 
 resources:
+  - namespace.yaml
+  - postgres-configmap.yaml
+  - postgres-statefulset.yaml
+  - postgres-service.yaml
+  - redis-statefulset.yaml
+  - redis-service.yaml
   - qdrant-deployment.yaml
   - qdrant-service.yaml
   - litellm-deployment.yaml

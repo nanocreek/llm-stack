@@ -76,13 +76,13 @@ portForward:
 
   # PostgreSQL
   - resourceType: service
-    resourceName: postgres
+    resourceName: dev-postgres
     port: 5432
     localPort: 5432
 
   # Redis
   - resourceType: service
-    resourceName: redis-master
+    resourceName: dev-redis
     port: 6379
     localPort: 6379
 

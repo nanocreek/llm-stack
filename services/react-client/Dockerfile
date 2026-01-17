@@ -23,27 +23,29 @@ RUN npm run build
 # Stage 2: Production nginx server
 FROM nginx:alpine
 
-# Copy server configuration
-RUN cat > /etc/nginx/conf.d/default.conf <<'EOF'
-server {
-    listen 3000;
-    server_name _;
-    root /usr/share/nginx/html;
-    index index.html index.htm;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    location ~* ^.+\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-}
-EOF
+# Remove default nginx config to avoid port 80 conflicts
+RUN rm -f /etc/nginx/conf.d/default.conf
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Create nginx config for port 3000
+RUN printf '%s\n' \
+    'server {' \
+    '    listen 3000 default_server;' \
+    '    server_name _;' \
+    '    root /usr/share/nginx/html;' \
+    '    index index.html index.htm;' \
+    '' \
+    '    location / {' \
+    '        try_files $uri $uri/ /index.html;' \
+    '    }' \
+    '' \
+    '    location ~* ^.+\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {' \
+    '        expires 1y;' \
+    '        add_header Cache-Control "public, immutable";' \
+    '    }' \
+    '}' > /etc/nginx/conf.d/app.conf
 
 # Expose port 3000
 EXPOSE 3000

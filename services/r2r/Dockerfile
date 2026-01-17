@@ -4,7 +4,9 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies
-# Note: postgresql-contrib includes pgvector extension support (required for vector embeddings)
+# Note: postgresql-contrib provides tools for database management
+#       The startup script includes pgvector error suppression wrapper to handle
+#       cases where pgvector extension is not available (e.g., Railway managed PostgreSQL)
 RUN apt-get update && apt-get install -y \
     curl \
     git \
@@ -28,6 +30,10 @@ RUN echo "Checking R2R installation..." && \
 RUN mkdir -p /app/config /app/data
 
 # Copy and verify startup script
+# The startup script includes:
+# - Dependency wait logic for PostgreSQL and Qdrant
+# - Runtime generation of pgvector error suppression wrapper
+# - Configuration file creation from environment variables
 COPY start.sh /app/start.sh
 RUN chmod +x /app/start.sh && \
     ls -la /app/start.sh && \

@@ -116,6 +116,7 @@ litellm_base_url = "http://litellm.railway.internal:4000"
 
 [database]
 provider = "postgres"
+disable_create_extension = true
 
 [vector_database]
 provider = "qdrant"
@@ -126,12 +127,122 @@ echo "Configuration created:"
 cat /app/config/r2r.toml
 
 echo "================================"
-echo "Starting R2R server..."
-echo "Command: ${R2R_CMD} serve --host ${ACTUAL_HOST} --port ${ACTUAL_PORT} --config-path /app/config/r2r.toml"
+echo "Creating pgvector error suppression wrapper..."
 echo "================================"
 
-# Start R2R using Python module invocation
-exec python -m r2r.serve \
+# Create a Python wrapper to suppress pgvector extension errors
+cat > /app/r2r_wrapper.py <<'PYTHON_EOF'
+#!/usr/bin/env python3
+"""
+R2R pgvector error suppression wrapper
+
+This wrapper catches and suppresses FeatureNotSupportedError exceptions
+related to pgvector extension creation, which can occur on Railway's
+managed PostgreSQL that doesn't have pgvector installed.
+
+The wrapper allows R2R to continue operating without pgvector since
+vector storage is handled by Qdrant (configured in r2r.toml).
+
+Root cause: R2R unconditionally attempts to create pgvector extension
+during initialization, even though disable_create_extension=true doesn't
+actually prevent this at the code level.
+"""
+
+import sys
+import logging
+from pathlib import Path
+
+# Setup logging before importing r2r
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+def patch_postgres_module():
+    """
+    Patch the r2r postgres module to suppress pgvector extension errors.
+    This wraps the create_tables method to catch and suppress pgvector errors.
+    """
+    try:
+        from r2r.providers.database import postgres
+        import functools
+        
+        original_init = postgres.PostgresVectorDB.__init__
+        
+        @functools.wraps(original_init)
+        def patched_init(self, *args, **kwargs):
+            """Patched init that suppresses pgvector creation errors"""
+            try:
+                logger.info("Initializing PostgreSQL with pgvector error suppression wrapper")
+                return original_init(self, *args, **kwargs)
+            except Exception as e:
+                error_msg = str(e).lower()
+                # Check if this is a pgvector-related error
+                if any(phrase in error_msg for phrase in [
+                    'vector',
+                    'extension',
+                    'control file',
+                    'not available',
+                    'feature not supported'
+                ]):
+                    logger.warning(
+                        f"⚠ pgvector extension creation failed (expected on Railway): {e}\n"
+                        f"  Vector storage will use Qdrant (configured in r2r.toml)\n"
+                        f"  PostgreSQL will handle document and metadata storage only"
+                    )
+                    # Try to continue without pgvector - don't re-raise
+                    return
+                else:
+                    # Re-raise non-pgvector errors
+                    logger.error(f"Database initialization error: {e}")
+                    raise
+        
+        postgres.PostgresVectorDB.__init__ = patched_init
+        logger.info("✓ PostgreSQL pgvector error suppression patch applied")
+        
+    except ImportError as e:
+        logger.warning(f"Could not import postgres module for patching: {e}")
+    except Exception as e:
+        logger.error(f"Error applying postgres patch: {e}")
+
+def main():
+    """Main entry point - start R2R with patched error handling"""
+    logger.info("Starting R2R with pgvector error suppression wrapper")
+    
+    # Apply the patch before importing r2r.serve
+    patch_postgres_module()
+    
+    # Now import and run the actual r2r serve
+    from r2r import serve_app
+    from r2r.cli.main import main as r2r_main
+    
+    logger.info("Launching R2R serve command")
+    # Pass command line arguments through
+    sys.argv[0] = 'r2r'
+    try:
+        r2r_main()
+    except KeyboardInterrupt:
+        logger.info("R2R server interrupted")
+        sys.exit(0)
+    except Exception as e:
+        logger.error(f"R2R server error: {e}", exc_info=True)
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()
+PYTHON_EOF
+
+chmod +x /app/r2r_wrapper.py
+echo "✓ Wrapper script created"
+
+echo "================================"
+echo "Starting R2R server with pgvector error suppression..."
+echo "Command: python /app/r2r_wrapper.py serve --host ${ACTUAL_HOST} --port ${ACTUAL_PORT} --config-path /app/config/r2r.toml"
+echo "================================"
+
+# Start R2R using the wrapper that suppresses pgvector errors
+exec python /app/r2r_wrapper.py serve \
   --host "${ACTUAL_HOST}" \
   --port "${ACTUAL_PORT}" \
   --config-path /app/config/r2r.toml

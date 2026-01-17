@@ -4,11 +4,13 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies
+# Note: postgresql-contrib includes pgvector extension support (required for vector embeddings)
 RUN apt-get update && apt-get install -y \
     curl \
     git \
     build-essential \
     postgresql-client \
+    postgresql-contrib \
     && rm -rf /var/lib/apt/lists/*
 
 # Install R2R framework with all dependencies

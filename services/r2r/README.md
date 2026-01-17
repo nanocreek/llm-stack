@@ -36,16 +36,30 @@ The service requires the following environment variables, which are automaticall
 R2R requires the following services to be running:
 
 1. **PostgreSQL** - For document and metadata storage
+   - **Required Extension**: `pgvector` - For vector embeddings in PostgreSQL
+   - On Railway: Ensure pgvector is enabled/installed on your managed PostgreSQL instance
 2. **Qdrant** - For vector embeddings and similarity search
 3. **Redis** - For caching and session management
+
+### PostgreSQL pgvector Extension
+
+The pgvector extension is required for R2R to store and query vector embeddings in PostgreSQL. The startup script will automatically attempt to create this extension when PostgreSQL is ready.
+
+- **Local Development**: Install pgvector in PostgreSQL via your provider
+- **Railway Managed PostgreSQL**: Request pgvector addon/extension through Railway's database configuration
+- **Self-Managed PostgreSQL**: Install using `CREATE EXTENSION IF NOT EXISTS vector;` after loading the pgvector shared library
 
 ## Dockerfile
 
 The Dockerfile uses:
 - `python:3.11-slim` base image for minimal size
-- Installs system dependencies required by R2R (curl, git, build-essential, postgresql-client)
+- Installs system dependencies required by R2R:
+  - `curl`, `git`, `build-essential` - General development tools
+  - `postgresql-client` - PostgreSQL client tools (psql, pg_isready)
+  - `postgresql-contrib` - PostgreSQL extensions (includes pgvector client libraries)
 - Installs the R2R framework and uvicorn[standard] via pip
 - Includes startup script with dependency wait logic for PostgreSQL and Qdrant
+- Includes pgvector extension initialization (attempts to create extension after PostgreSQL connection)
 - Includes health check for automatic monitoring with extended timeout
 
 ## Service-to-Service Communication
@@ -108,6 +122,32 @@ services:
 3. The `railway.toml` file automatically configures the build and deployment settings
 
 ## Troubleshooting
+
+### pgvector Extension Issues
+
+**Problem**: Deployment fails with error:
+```
+ERROR - Error extension "vector" is not available
+DETAIL: Could not open extension control file "/usr/share/postgresql/17/extension/vector.control"
+```
+
+**Root Causes**:
+1. pgvector package is not installed in PostgreSQL
+2. The PostgreSQL server lacks necessary privileges to create extensions
+3. pgvector library files are not available in PostgreSQL's extension directory
+
+**Solutions**:
+- **Railway Managed PostgreSQL**: Contact Railway support to enable pgvector addon, or use a self-managed PostgreSQL instance
+- **Self-Managed PostgreSQL**: Install pgvector using your PostgreSQL package manager (e.g., `apt-get install postgresql-contrib`)
+- **Docker/Local**: The r2r container includes `postgresql-contrib` tools for client-side operations, but the PostgreSQL server itself must have pgvector installed
+- **Verification**: The startup script will attempt `CREATE EXTENSION IF NOT EXISTS vector;` and report if the extension is available
+
+The startup logs will show:
+- `✓ pgvector extension setup successful` - Extension created successfully
+- `✓ pgvector extension is available` - Extension already exists
+- `✗ pgvector extension is NOT available` - R2R may fail; requires pgvector installation
+
+**Note**: If R2R doesn't strictly require pgvector at startup (depends on r2r version), the service may start but fail when attempting vector operations. Check r2r documentation for vector storage requirements.
 
 ### Common Issues
 

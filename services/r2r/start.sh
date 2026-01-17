@@ -48,6 +48,31 @@ if [ -n "${R2R_POSTGRES_HOST}" ]; then
     echo "PostgreSQL not ready (attempt $i/30)"
     sleep 2
   done
+  
+  # Create pgvector extension after PostgreSQL is ready
+  echo "================================"
+  echo "Setting up pgvector extension..."
+  PSQL_COMMAND="psql -h ${R2R_POSTGRES_HOST} -p ${R2R_POSTGRES_PORT:-5432} -U ${R2R_POSTGRES_USER:-postgres} -d ${R2R_POSTGRES_DBNAME:-postgres}"
+  
+  # Attempt to create the pgvector extension
+  if ${PSQL_COMMAND} -c "CREATE EXTENSION IF NOT EXISTS vector;" 2>&1 | tee /tmp/pgvector_setup.log; then
+    echo "✓ pgvector extension setup successful"
+  else
+    echo "⚠ pgvector extension creation may have failed"
+    echo "  This could be because:"
+    echo "  1. pgvector package is not installed on PostgreSQL"
+    echo "  2. Extension requires SUPERUSER privileges"
+    echo "  3. Extension is already created"
+    echo "  Attempting to verify extension exists..."
+    
+    if ${PSQL_COMMAND} -c "SELECT extname FROM pg_extension WHERE extname='vector';" 2>&1 | grep -q "vector"; then
+      echo "✓ pgvector extension is available"
+    else
+      echo "✗ pgvector extension is NOT available - R2R may fail if it requires pgvector"
+      echo "  For Railway with managed PostgreSQL, ensure pgvector addon is enabled"
+    fi
+  fi
+  echo "================================"
 else
   echo "Skipping PostgreSQL wait (R2R_POSTGRES_HOST not set)"
 fi

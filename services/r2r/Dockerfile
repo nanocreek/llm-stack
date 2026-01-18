@@ -4,23 +4,36 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies
+# Note: postgresql-contrib provides tools for database management
+#       The startup script includes pgvector error suppression wrapper to handle
+#       cases where pgvector extension is not available (e.g., Railway managed PostgreSQL)
 RUN apt-get update && apt-get install -y \
     curl \
     git \
     build-essential \
     postgresql-client \
+    postgresql-contrib \
     && rm -rf /var/lib/apt/lists/*
 
 # Install R2R framework with all dependencies
-RUN pip install --no-cache-dir r2r uvicorn[standard]
+RUN pip install --no-cache-dir 'r2r[core]' uvicorn[standard]
+
+# Ensure pip bin directory is in PATH
+ENV PATH="/usr/local/bin:${PATH}"
 
 # Verify R2R installation
-RUN r2r --version || echo "WARNING: r2r command not found!"
+RUN echo "Checking R2R installation..." && \
+    python -m r2r.serve --help && \
+    python -c "import r2r; print(f'R2R module version: {r2r.__version__}')"
 
 # Create R2R configuration directory
 RUN mkdir -p /app/config /app/data
 
 # Copy and verify startup script
+# The startup script includes:
+# - Dependency wait logic for PostgreSQL and Qdrant
+# - Runtime generation of pgvector error suppression wrapper
+# - Configuration file creation from environment variables
 COPY start.sh /app/start.sh
 RUN chmod +x /app/start.sh && \
     ls -la /app/start.sh && \

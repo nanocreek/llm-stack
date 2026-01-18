@@ -246,6 +246,10 @@ Each service has its own environment variables defined in its `railway.toml` fil
 - `OPENAI_API_BASE_URL`: `http://litellm.railway.internal:4000/v1`
 - `OPENAI_API_KEY`: `${{litellm.LITELLM_MASTER_KEY}}`
 - `WEBUI_AUTH`: false
+- `VECTOR_DB`: qdrant
+- `QDRANT_URI`: `http://qdrant.railway.internal:6333` (complete connection URI for QdrantClient)
+- `QDRANT_HOST`: `qdrant.railway.internal` (kept for backward compatibility)
+- `QDRANT_PORT`: 6333 (kept for backward compatibility)
 
 ### Variable Reference Syntax
 
@@ -364,6 +368,61 @@ Health checks are configured in [`railway.json`](railway.json):
 Railway automatically polls these endpoints to determine service health.
 
 ## Common Deployment Issues
+
+### Issue: OpenWebUI Fails with "QDRANT_URI is not set"
+
+**Symptoms:**
+- OpenWebUI service crashes immediately after startup
+- Error message in logs: `ValueError: QDRANT_URI is not set`
+- Service was previously working with just `QDRANT_HOST` and `QDRANT_PORT` variables
+
+**Root Cause:**
+- OpenWebUI's QdrantClient requires a **complete pre-constructed `QDRANT_URI` environment variable**
+- Unlike R2R which constructs the connection URI from separate host/port variables, OpenWebUI expects the URI to be explicitly provided
+- The QdrantClient library (used by OpenWebUI) raises a `ValueError` if `QDRANT_URI` is not present in environment
+
+**Why This Differs from R2R:**
+- **R2R Configuration**: Uses `R2R_QDRANT_HOST` + `R2R_QDRANT_PORT` → constructs URI internally
+- **OpenWebUI Configuration**: Requires `QDRANT_URI` → pre-constructed URI string passed to QdrantClient
+
+**Solution:**
+
+1. **Set `QDRANT_URI` in OpenWebUI service variables:**
+   ```
+   QDRANT_URI=http://qdrant.railway.internal:6333
+   ```
+
+2. **Optionally keep `QDRANT_HOST` and `QDRANT_PORT` for reference/backward compatibility:**
+   ```
+   QDRANT_HOST=qdrant.railway.internal
+   QDRANT_PORT=6333
+   ```
+
+3. **Verify Qdrant service is running:**
+   - Check Railway project dashboard for Qdrant service status (should be 🟢 Healthy)
+   - Qdrant must be running before OpenWebUI starts
+
+**Configuration Details:**
+
+| Component | Value | Description |
+|-----------|-------|-------------|
+| Protocol | `http://` | Qdrant REST API (not gRPC) |
+| Hostname | `qdrant.railway.internal` | Railway internal DNS for Qdrant service |
+| Port | `6333` | Qdrant HTTP service port (matches `QDRANT__SERVICE__HTTP_PORT` in Qdrant config) |
+| Format | `http://qdrant.railway.internal:6333` | Complete URI string required by QdrantClient |
+
+**Verification Steps:**
+1. In Railway, open the OpenWebUI service → Variables tab
+2. Confirm `QDRANT_URI=http://qdrant.railway.internal:6333` is set
+3. Confirm `VECTOR_DB=qdrant` is set
+4. Trigger a redeploy of the OpenWebUI service
+5. Check service logs - should start successfully without "QDRANT_URI is not set" error
+
+**Common Mistakes:**
+- ❌ Missing the `http://` protocol prefix
+- ❌ Using wrong port (e.g., 6334 for gRPC instead of 6333 for HTTP)
+- ❌ Not setting the variable at all (relying on QDRANT_HOST and QDRANT_PORT alone)
+- ❌ Qdrant service not running when OpenWebUI starts
 
 ### Issue: Services Fail to Start
 

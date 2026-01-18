@@ -70,11 +70,13 @@ This template provides a production-ready LLM application stack that includes:
 
 ### Deployment Options
 
-#### Option A: One-Click Deployment (Recommended) 🚀
+#### Option A: Deploy from Template (Recommended) 🚀
+
+**If a Railway template has been created for this repository**, you can use the one-click deployment:
 
 **Click the "Deploy on Railway" button at the top of this page!**
 
-Railway will automatically:
+The template will automatically:
 - ✅ Create all 5 services from the `services/` directories
 - ✅ Add PostgreSQL and Redis managed plugins
 - ✅ Set up service-to-service communication
@@ -85,6 +87,49 @@ Railway will automatically:
 2. A master key for LiteLLM authentication
 
 **Deployment takes ~5-10 minutes.** Railway handles all the complexity!
+
+#### Option A1: Create the Railway Template (For Repository Maintainers)
+
+If you're the repository owner and want to enable one-click deployment for users, you need to create the template through Railway's UI. Railway templates **cannot be created via a `railway.json` file** - they must be configured through Railway's Template Builder.
+
+**Two ways to create the template:**
+
+**Method 1: From an Existing Deployment (Easier)**
+1. Deploy the stack manually using Option B below
+2. Once all services are running successfully, go to your Railway project
+3. Click on the project settings (⚙️)
+4. Click **"Create Template"** or **"Convert to Template"**
+5. Railway will automatically capture all services, plugins, and environment variable keys
+6. Publish the template
+7. Update the Deploy button URL at the top of this README with your template URL
+
+**Method 2: Using Template Builder (From Scratch)**
+1. Go to your [Railway workspace settings](https://railway.app/account) → **Templates** page
+2. Click **"New Template"**
+3. **Add each service** by clicking **"+ New Service"**:
+   - **Service**: Qdrant
+     - **Source Repo**: `https://github.com/nanocreek/llm-stack`
+     - **Root Directory**: `services/qdrant`
+   - **Service**: LiteLLM
+     - **Source Repo**: `https://github.com/nanocreek/llm-stack`
+     - **Root Directory**: `services/litellm`
+   - **Service**: R2R
+     - **Source Repo**: `https://github.com/nanocreek/llm-stack`
+     - **Root Directory**: `services/r2r`
+   - **Service**: OpenWebUI
+     - **Source Repo**: `https://github.com/nanocreek/llm-stack`
+     - **Root Directory**: `services/openwebui`
+   - **Service**: React-Client
+     - **Source Repo**: `https://github.com/nanocreek/llm-stack`
+     - **Root Directory**: `services/react-client`
+4. **Add plugins**: Click **"+ New"** → **"Database"**
+   - Add **PostgreSQL**
+   - Add **Redis**
+5. **Configure environment variables** for each service (Railway will prompt template users to fill these in)
+6. **Publish the template**
+7. Copy the template URL and update the Deploy button at the top of this README
+
+**📚 Learn more:** [Creating Multi-Service Templates on Railway](https://docs.railway.com/guides/create)
 
 #### Option B: Manual Service-by-Service Deployment
 

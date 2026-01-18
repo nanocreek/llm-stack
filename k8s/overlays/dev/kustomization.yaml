@@ -41,6 +41,9 @@ patchesJson6902:
       name: react-client
     patch: |-
       - op: replace
+        path: /spec/progressDeadlineSeconds
+        value: 900
+      - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: IfNotPresent
   - target:

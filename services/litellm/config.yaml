@@ -6,33 +6,33 @@ model_list:
   # OpenAI models - requires OPENAI_API_KEY environment variable
   - model_name: gpt-4
     litellm_params:
-      model: gpt-4
+      model: openai/gpt-4
       api_key: os.environ/OPENAI_API_KEY
-  
+
   - model_name: gpt-4-turbo
     litellm_params:
-      model: gpt-4-turbo-preview
+      model: openai/gpt-4-turbo-preview
       api_key: os.environ/OPENAI_API_KEY
-  
+
   - model_name: gpt-3.5-turbo
     litellm_params:
-      model: gpt-3.5-turbo
+      model: openai/gpt-3.5-turbo
       api_key: os.environ/OPENAI_API_KEY
-  
+
   # Anthropic models - requires ANTHROPIC_API_KEY environment variable
   - model_name: claude-3-opus
     litellm_params:
-      model: claude-3-opus-20240229
+      model: anthropic/claude-3-opus-20240229
       api_key: os.environ/ANTHROPIC_API_KEY
-  
+
   - model_name: claude-3-sonnet
     litellm_params:
-      model: claude-3-sonnet-20240229
+      model: anthropic/claude-3-sonnet-20240229
       api_key: os.environ/ANTHROPIC_API_KEY
-  
+
   - model_name: claude-3-haiku
     litellm_params:
-      model: claude-3-haiku-20240307
+      model: anthropic/claude-3-haiku-20240307
       api_key: os.environ/ANTHROPIC_API_KEY
 
 # General settings

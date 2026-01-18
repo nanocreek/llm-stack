@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Railway Verification Dashboard</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .terminal {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            padding: 16px;
+            border-radius: 8px;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .terminal::-webkit-scrollbar {
+            width: 8px;
+        }
+        .terminal::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+        .terminal::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-passed { background: #10b981; color: white; }
+        .status-failed { background: #ef4444; color: white; }
+        .status-running { background: #3b82f6; color: white; animation: pulse 2s infinite; }
+        .status-never_run { background: #6b7280; color: white; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.2s;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">
+                <i class="fas fa-shield-alt text-blue-600"></i>
+                Railway Verification Dashboard
+            </h1>
+            <p class="text-gray-600">Comprehensive deployment verification and security testing</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8" id="statsContainer">
+            <!-- Stats will be loaded here -->
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="card mb-6">
+            <div class="flex flex-wrap gap-3">
+                <button id="runAllBtn" class="btn btn-primary">
+                    <i class="fas fa-play"></i>
+                    Run All Checks
+                </button>
+                <button id="runCriticalBtn" class="btn btn-success">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Run Critical Only
+                </button>
+                <button id="refreshBtn" class="btn bg-gray-600 text-white">
+                    <i class="fas fa-sync"></i>
+                    Refresh Status
+                </button>
+                <button id="clearHistoryBtn" class="btn btn-danger">
+                    <i class="fas fa-trash"></i>
+                    Clear Output
+                </button>
+            </div>
+        </div>
+
+        <!-- Verification Scripts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div>
+                <h2 class="text-2xl font-bold mb-4 text-gray-900">Verification Checks</h2>
+                <div id="scriptsContainer">
+                    <!-- Scripts will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Output Terminal -->
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-900">Output Terminal</h2>
+                    <button id="clearTerminalBtn" class="btn bg-gray-600 text-white btn-sm">
+                        <i class="fas fa-eraser"></i>
+                        Clear
+                    </button>
+                </div>
+                <div id="terminal" class="terminal">
+                    <div class="text-green-400">Railway Verification Terminal Ready</div>
+                    <div class="text-gray-500">Run a check to see output...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Execution History -->
+        <div class="card">
+            <h2 class="text-2xl font-bold mb-4 text-gray-900">Recent Executions</h2>
+            <div id="historyContainer" class="overflow-x-auto">
+                <!-- History will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let scripts = {};
+        let runningScripts = new Set();
+
+        // DOM Elements
+        const scriptsContainer = document.getElementById('scriptsContainer');
+        const terminal = document.getElementById('terminal');
+        const statsContainer = document.getElementById('statsContainer');
+        const historyContainer = document.getElementById('historyContainer');
+        const runAllBtn = document.getElementById('runAllBtn');
+        const runCriticalBtn = document.getElementById('runCriticalBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        const clearTerminalBtn = document.getElementById('clearTerminalBtn');
+
+        // Load initial data
+        async function loadScripts() {
+            const response = await fetch('/api/scripts');
+            const data = await response.json();
+
+            scripts = {};
+            data.forEach(script => {
+                scripts[script.id] = script;
+            });
+
+            renderScripts();
+        }
+
+        async function loadStats() {
+            const response = await fetch('/api/stats');
+            const data = await response.json();
+            renderStats(data);
+        }
+
+        async function loadHistory() {
+            const response = await fetch('/api/history?limit=10');
+            const data = await response.json();
+            renderHistory(data);
+        }
+
+        function renderStats(stats) {
+            const current = stats.current_status;
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <div class="text-3xl font-bold mb-2">${current.total_checks}</div>
+                    <div class="text-sm opacity-90">Total Checks</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                    <div class="text-3xl font-bold mb-2">${current.passed}</div>
+                    <div class="text-sm opacity-90">Passed</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                    <div class="text-3xl font-bold mb-2">${current.failed}</div>
+                    <div class="text-sm opacity-90">Failed</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
+                    <div class="text-3xl font-bold mb-2">${current.never_run}</div>
+                    <div class="text-sm opacity-90">Never Run</div>
+                </div>
+            `;
+        }
+
+        function renderScripts() {
+            const categories = {
+                security: [],
+                config: [],
+                health: [],
+                integration: [],
+                monitoring: [],
+                backup: []
+            };
+
+            Object.values(scripts).forEach(script => {
+                categories[script.category].push(script);
+            });
+
+            let html = '';
+            for (const [category, categoryScripts] of Object.entries(categories)) {
+                if (categoryScripts.length === 0) continue;
+
+                categoryScripts.forEach(script => {
+                    const isRunning = runningScripts.has(script.id);
+                    const status = isRunning ? 'running' : script.last_status;
+                    const statusIcon = {
+                        'passed': 'fa-check-circle text-green-600',
+                        'failed': 'fa-times-circle text-red-600',
+                        'running': 'fa-spinner fa-spin text-blue-600',
+                        'never_run': 'fa-circle text-gray-400'
+                    }[status];
+
+                    html += `
+                        <div class="card">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <i class="fas ${statusIcon}"></i>
+                                        <h3 class="font-bold text-lg text-gray-900">${script.name}</h3>
+                                        ${script.critical ? '<span class="status-badge bg-orange-500 text-white text-xs">CRITICAL</span>' : ''}
+                                    </div>
+                                    <p class="text-sm text-gray-600">${script.description}</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between">
+                                <div class="text-xs text-gray-500">
+                                    ${script.last_run ? `Last run: ${new Date(script.last_run).toLocaleString()}` : 'Never run'}
+                                    ${script.last_duration ? ` (${script.last_duration.toFixed(1)}s)` : ''}
+                                </div>
+                                <button
+                                    onclick="runScript('${script.id}')"
+                                    class="btn btn-primary btn-sm"
+                                    ${isRunning ? 'disabled' : ''}
+                                >
+                                    <i class="fas ${isRunning ? 'fa-spinner fa-spin' : 'fa-play'}"></i>
+                                    ${isRunning ? 'Running...' : 'Run'}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            scriptsContainer.innerHTML = html;
+        }
+
+        function renderHistory(history) {
+            if (history.length === 0) {
+                historyContainer.innerHTML = '<p class="text-gray-500 text-center py-4">No execution history yet</p>';
+                return;
+            }
+
+            let html = `
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-4 py-2 text-left">Check</th>
+                            <th class="px-4 py-2 text-left">Status</th>
+                            <th class="px-4 py-2 text-left">Time</th>
+                            <th class="px-4 py-2 text-left">Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            history.reverse().forEach(entry => {
+                const statusClass = entry.status === 'passed' ? 'status-passed' : 'status-failed';
+                html += `
+                    <tr class="border-b border-gray-200">
+                        <td class="px-4 py-3">${entry.name}</td>
+                        <td class="px-4 py-3">
+                            <span class="status-badge ${statusClass}">
+                                ${entry.status.toUpperCase()}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-gray-600">${new Date(entry.timestamp).toLocaleString()}</td>
+                        <td class="px-4 py-3 text-gray-600">${entry.duration.toFixed(1)}s</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+            `;
+
+            historyContainer.innerHTML = html;
+        }
+
+        function appendToTerminal(text, className = '') {
+            const line = document.createElement('div');
+            line.textContent = text;
+            if (className) line.className = className;
+            terminal.appendChild(line);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function clearTerminal() {
+            terminal.innerHTML = '<div class="text-green-400">Terminal cleared</div>';
+        }
+
+        function runScript(scriptId) {
+            if (runningScripts.has(scriptId)) return;
+
+            runningScripts.add(scriptId);
+            renderScripts();
+
+            appendToTerminal(`\n${'='.repeat(60)}`, 'text-blue-400');
+            appendToTerminal(`Running: ${scripts[scriptId].name}`, 'text-yellow-400');
+            appendToTerminal(`${'='.repeat(60)}\n`, 'text-blue-400');
+
+            socket.emit('run_script', { script_id: scriptId });
+        }
+
+        function runAll() {
+            if (runningScripts.size > 0) return;
+
+            clearTerminal();
+            appendToTerminal('Running all verification checks...', 'text-green-400');
+            socket.emit('run_all', {});
+        }
+
+        function runCriticalOnly() {
+            if (runningScripts.size > 0) return;
+
+            clearTerminal();
+            appendToTerminal('Running critical checks only...', 'text-green-400');
+            socket.emit('run_all', { skip_non_critical: true });
+        }
+
+        // Socket event handlers
+        socket.on('script_started', (data) => {
+            runningScripts.add(data.script_id);
+            renderScripts();
+        });
+
+        socket.on('script_output', (data) => {
+            appendToTerminal(data.line);
+        });
+
+        socket.on('script_completed', (data) => {
+            runningScripts.delete(data.script_id);
+
+            if (scripts[data.script_id]) {
+                scripts[data.script_id].last_status = data.status;
+                scripts[data.script_id].last_run = data.timestamp;
+                scripts[data.script_id].last_duration = data.duration;
+                scripts[data.script_id].exit_code = data.exit_code;
+            }
+
+            renderScripts();
+            loadStats();
+            loadHistory();
+
+            const statusColor = data.status === 'passed' ? 'text-green-400' : 'text-red-400';
+            appendToTerminal(`\nStatus: ${data.status.toUpperCase()} (${data.duration.toFixed(1)}s)`, statusColor);
+        });
+
+        socket.on('error', (data) => {
+            appendToTerminal(`ERROR: ${data.message}`, 'text-red-400');
+            if (data.script_id) {
+                runningScripts.delete(data.script_id);
+                renderScripts();
+            }
+        });
+
+        socket.on('all_started', (data) => {
+            appendToTerminal(`\nStarting ${data.total} verification checks...`, 'text-blue-400');
+        });
+
+        socket.on('all_completed', (data) => {
+            appendToTerminal(`\nAll checks completed!`, 'text-green-400');
+        });
+
+        // Event listeners
+        runAllBtn.addEventListener('click', runAll);
+        runCriticalBtn.addEventListener('click', runCriticalOnly);
+        refreshBtn.addEventListener('click', () => {
+            loadScripts();
+            loadStats();
+            loadHistory();
+        });
+        clearTerminalBtn.addEventListener('click', clearTerminal);
+        clearHistoryBtn.addEventListener('click', clearTerminal);
+
+        // Initial load
+        loadScripts();
+        loadStats();
+        loadHistory();
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            if (runningScripts.size === 0) {
+                loadStats();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

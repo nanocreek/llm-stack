@@ -1,6 +1,6 @@
 # LLM Stack Template
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/new?template=https://github.com/nanocreek/llm-stack)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/od9RFE?referralCode=qeah9u&utm_medium=integration&utm_source=template&utm_campaign=generic)
 
 A complete LLM application stack deployed on Railway, featuring a React frontend, RAG framework, vector database, LLM proxy, and web UI with managed PostgreSQL and Redis.
 

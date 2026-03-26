@@ -1,5 +1,5 @@
 # LiteLLM service using official Docker image
-FROM docker.litellm.ai/berriai/litellm:v1.80.8-stable
+FROM docker.litellm.ai/berriai/litellm:v1.82.3-stable.patch.2
 
 WORKDIR /app
 

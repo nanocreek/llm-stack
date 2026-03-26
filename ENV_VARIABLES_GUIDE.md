@@ -1,51 +1,29 @@
 # Environment Variables Guide
 
-This guide explains how to use the `.env` files for Railway deployment.
+This guide explains how to configure environment variables for the LiteLLM + PostgreSQL + Redis stack deployment on Railway.
 
-## Clean .env Files for Copy-Paste
-
-Each service has a clean `.env` file (without comments) that you can copy directly into Railway's Raw Editor.
+## Quick Setup
 
 ### How to Use:
 
-1. **In Railway, click on a service** (e.g., "Qdrant")
+1. **In Railway, click on the LiteLLM service**
 2. **Go to the "Variables" tab**
 3. **Click "RAW Editor"** (button at the top right)
-4. **Copy the entire contents** of the corresponding `.env` file below
+4. **Copy the entire contents** of the `.env` file below
 5. **Paste into Railway's Raw Editor**
 6. **Click "Update Variables"**
-7. **Repeat for each service**
 
 ---
 
-## Service Environment Variables
+## LiteLLM Environment Variables
 
-### 1. React Client
-**File:** [`services/react-client/.env`](services/react-client/.env)
-
-```bash
-PORT=3000
-VITE_API_BASE_URL=http://openwebui.railway.internal:8080
-```
-
----
-
-### 2. Qdrant
-**File:** [`services/qdrant/.env`](services/qdrant/.env)
-
-```bash
-QDRANT__SERVICE__HTTP_PORT=6333
-QDRANT__SERVICE__GRPC_PORT=6334
-```
-
----
-
-### 3. LiteLLM
 **File:** [`services/litellm/.env`](services/litellm/.env)
 
 ```bash
 LITELLM_PORT=4000
 LITELLM_MASTER_KEY=sk-1234567890abcdef
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+REDIS_URL=${{Redis.REDIS_URL}}
 OPENAI_API_KEY=
 ANTHROPIC_API_KEY=
 ```
@@ -53,66 +31,57 @@ ANTHROPIC_API_KEY=
 **⚠️ IMPORTANT:** 
 - Replace `sk-1234567890abcdef` with a strong random key: `openssl rand -base64 32`
 - Add your actual API keys for `OPENAI_API_KEY` and `ANTHROPIC_API_KEY`
+- `DATABASE_URL` and `REDIS_URL` are automatically provided by Railway's PostgreSQL and Redis plugins
 
 ---
 
-### 4. R2R
-**File:** [`services/r2r/.env`](services/r2r/.env)
+## Variable Reference
 
-```bash
-R2R_PORT=7272
-R2R_HOST=0.0.0.0
-R2R_POSTGRES_HOST=${{Postgres.PGHOST}}
-R2R_POSTGRES_PORT=${{Postgres.PGPORT}}
-R2R_POSTGRES_USER=${{Postgres.PGUSER}}
-R2R_POSTGRES_PASSWORD=${{Postgres.PGPASSWORD}}
-R2R_POSTGRES_DBNAME=${{Postgres.PGDATABASE}}
-R2R_VECTOR_DB_PROVIDER=qdrant
-R2R_QDRANT_HOST=qdrant.railway.internal
-R2R_QDRANT_PORT=6333
-REDIS_URL=${{Redis.REDIS_URL}}
-```
+### Required Variables
 
-**Note:** Railway will automatically replace `${{Postgres.*}}` and `${{Redis.*}}` with actual values from your plugins.
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `LITELLM_MASTER_KEY` | Master API key for LiteLLM authentication | `sk-a7K3jP9mNx8vQ2wR5tY1bZ4cD6eF8gH0` |
+| `LITELLM_PORT` | Port for LiteLLM server | `4000` |
+
+### Database & Cache (Auto-configured by Railway)
+
+| Variable | Source | Description |
+|----------|--------|-------------|
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` | PostgreSQL connection for caching and logging |
+| `REDIS_URL` | `${{Redis.REDIS_URL}}` | Redis connection for distributed caching |
+
+### LLM Provider API Keys (Optional)
+
+| Variable | Description | Get Key From |
+|----------|-------------|--------------|
+| `OPENAI_API_KEY` | OpenAI API access | [platform.openai.com](https://platform.openai.com/api-keys) |
+| `ANTHROPIC_API_KEY` | Anthropic Claude access | [console.anthropic.com](https://console.anthropic.com/) |
+| `AZURE_API_KEY` | Azure OpenAI access | Azure Portal |
+| `AZURE_API_BASE` | Azure OpenAI endpoint | Azure Portal |
+| `AZURE_API_VERSION` | Azure API version | `2024-02-15-preview` |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Google Vertex AI credentials | GCP Console |
+| `COHERE_API_KEY` | Cohere API access | [cohere.com](https://cohere.com/) |
+| `REPLICATE_API_KEY` | Replicate API access | [replicate.com](https://replicate.com/) |
 
 ---
 
-### 5. OpenWebUI
-**File:** [`services/openwebui/.env`](services/openwebui/.env)
+## Quick Copy-Paste
+
+Copy and paste these variables into Railway's Raw Editor for the LiteLLM service:
 
 ```bash
-PORT=8080
-OPENAI_API_BASE_URL=http://litellm.railway.internal:4000/v1
-OPENAI_API_KEY=sk-1234567890abcdef
+LITELLM_PORT=4000
+LITELLM_MASTER_KEY=your-secure-key-here
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 REDIS_URL=${{Redis.REDIS_URL}}
-WEBUI_AUTH=false
-WEBUI_SECRET_KEY=your_secret_key_here
-VECTOR_DB=qdrant
-QDRANT_URI=http://qdrant.railway.internal:6333
-QDRANT_HOST=qdrant.railway.internal
-QDRANT_PORT=6333
+OPENAI_API_KEY=your-openai-key-here
+ANTHROPIC_API_KEY=your-anthropic-key-here
 ```
 
-**⚠️ IMPORTANT:**
-- Replace `sk-1234567890abcdef` with the SAME `LITELLM_MASTER_KEY` value you used in the LiteLLM service
-- Replace `your_secret_key_here` with a strong random secret key (e.g., generated with `openssl rand -base64 32`)
-- `VECTOR_DB` configures the vector database backend (uses Qdrant for RAG operations)
-- **`QDRANT_URI` is REQUIRED when `VECTOR_DB=qdrant`** - This is the complete connection URI in format `http://qdrant.railway.internal:6333`
-- `QDRANT_HOST` and `QDRANT_PORT` are kept for backward compatibility but `QDRANT_URI` is what OpenWebUI actually uses
-- `DATABASE_URL` and `REDIS_URL` are provided by Railway's PostgreSQL and Redis plugins
-
----
-
-## Quick Copy-Paste Order
-
-Copy and paste in this order for best results:
-
-1. **Qdrant** (no dependencies)
-2. **LiteLLM** (no dependencies) - Remember to set your API keys!
-3. **R2R** (depends on Qdrant, Postgres, Redis)
-4. **OpenWebUI** (depends on LiteLLM)
-5. **React Client** (depends on OpenWebUI)
+**Remember to:**
+1. Replace `your-secure-key-here` with a key generated by `openssl rand -base64 32`
+2. Add your actual LLM provider API keys
 
 ---
 
@@ -121,21 +90,13 @@ Copy and paste in this order for best results:
 ### Railway Variable Syntax
 
 Railway automatically resolves these special variables:
-- `${{Postgres.PGHOST}}` - PostgreSQL host
-- `${{Postgres.PGPORT}}` - PostgreSQL port
-- `${{Postgres.PGUSER}}` - PostgreSQL user
-- `${{Postgres.PGPASSWORD}}` - PostgreSQL password
-- `${{Postgres.PGDATABASE}}` - PostgreSQL database name
+- `${{Postgres.DATABASE_URL}}` - PostgreSQL connection string
 - `${{Redis.REDIS_URL}}` - Redis connection URL
 
 ### Internal DNS
 
-Services communicate using Railway's internal DNS:
-- `qdrant.railway.internal:6333`
+LiteLLM is accessible within Railway's private network:
 - `litellm.railway.internal:4000`
-- `r2r.railway.internal:7272`
-- `openwebui.railway.internal:8080`
-- `react-client.railway.internal:3000`
 
 ### Security
 
@@ -158,7 +119,7 @@ The `.gitignore` files in each service directory already exclude `.env` files, b
 
 ### Can't Find Raw Editor?
 
-1. Click on a service in Railway
+1. Click on the LiteLLM service in Railway
 2. Go to "Variables" tab
 3. Look for "RAW Editor" button (top right of the variables section)
 4. If not visible, try clicking "Add Variable" first, then look for Raw Editor
@@ -169,7 +130,7 @@ The `.gitignore` files in each service directory already exclude `.env` files, b
 
 If you prefer not to use Raw Editor, you can add variables one by one through Railway's UI:
 
-1. Click on a service
+1. Click on the LiteLLM service
 2. Go to "Variables" tab
 3. Click "New Variable"
 4. Enter variable name and value

@@ -1,6 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Include the development overlay
-bases:
-  - k8s/overlays/dev
+# Include the base manifests for LiteLLM + PostgreSQL + Redis
+resources:
+  - k8s/base
+
+namespace: llm-stack

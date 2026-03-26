@@ -1,8 +1,8 @@
-# 🚀 Quick Start: Deploy to Railway in 5 Minutes
+# 🚀 Quick Start: Deploy LiteLLM to Railway in 5 Minutes
 
-Deploy a complete LLM application stack with one click. This guide gets you from zero to a running application with LiteLLM, Open WebUI, R2R RAG framework, and vector database—all managed by Railway.
+Deploy a production-ready LiteLLM proxy with PostgreSQL and Redis. This guide gets you from zero to a running LLM gateway with unified API access to 100+ providers.
 
-**What you'll have:** A production-ready LLM stack with chat interface, RAG capabilities, and managed databases.
+**What you'll have:** A production-grade LiteLLM proxy with persistent caching and rate limiting.
 
 ## Prerequisites
 
@@ -14,18 +14,14 @@ Deploy a complete LLM application stack with one click. This guide gets you from
 
 Click the button below to start your deployment:
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/od9RFE?referralCode=qeah9u&utm_medium=integration&utm_source=template&utm_campaign=generic)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy?referralCode=YOUR_REFERRAL_CODE)
 
 **What happens when you click:**
 1. Railway creates a new project in your account
-2. Deploys 7 services automatically:
-   - **LiteLLM** - Unified API proxy for multiple LLM providers (OpenAI, Anthropic, etc.)
-   - **Open WebUI** - Modern chat interface for LLM interactions
-   - **PostgreSQL** - Managed database for metadata and application data
-   - **Redis** - Managed cache for job queues and caching
-   - **Qdrant** - High-performance vector database for embeddings
-   - **R2R** - RAG framework for document processing and retrieval
-   - **React Client** - Frontend application for user interaction
+2. Deploys 3 services automatically:
+   - **LiteLLM** - Unified API proxy for 100+ LLM providers (OpenAI, Anthropic, Azure, etc.)
+   - **PostgreSQL** - Managed database for caching, logging, and persistence
+   - **Redis** - Managed cache for rate limiting and session management
 3. Prompts you to configure required variables
 4. Sets up internal networking between services
 
@@ -37,7 +33,7 @@ Railway will ask you to set these critical variables. Here's what each one does 
 
 ### ✅ LITELLM_MASTER_KEY
 
-**What it is:** Authentication key for LiteLLM proxy service. All other services use this to communicate with LiteLLM.
+**What it is:** Authentication key for LiteLLM proxy service. All API requests to LiteLLM must include this key.
 
 **How to generate:** Run this command in your terminal:
 ```bash
@@ -48,30 +44,28 @@ openssl rand -base64 32
 
 **Where to use it:** 
 - Set as `LITELLM_MASTER_KEY` in LiteLLM service
-- Set as `OPENAI_API_KEY` in OpenWebUI service (same value!)
+- Use this same key when making API calls to LiteLLM
 
-### ✅ POSTGRES_PASSWORD
+### ✅ POSTGRES_PASSWORD (Auto-configured)
 
-**What it is:** Password for your PostgreSQL database. Railway auto-generates this if you use their managed plugin.
+**What it is:** Password for your PostgreSQL database.
 
-**Important note:** If using Railway's PostgreSQL plugin (recommended), Railway provides this automatically. You don't need to set it manually.
+**Important note:** If using Railway's PostgreSQL plugin (recommended), Railway provides this automatically via `DATABASE_URL`. You don't need to set it manually.
 
-**If setting manually:** Use a strong password with at least 16 characters.
+### ✅ REDIS_URL (Auto-configured)
 
-### ✅ REDIS_PASSWORD
+**What it is:** Connection URL for your Redis instance.
 
-**What it is:** Password for your Redis instance. Railway auto-generates this if you use their managed plugin.
-
-**Important note:** If using Railway's Redis plugin (recommended), Railway provides this automatically via `REDIS_URL`.
-
-**If setting manually:** Use a strong password with at least 16 characters.
+**Important note:** If using Railway's Redis plugin (recommended), Railway provides this automatically via `REDIS_URL`. You don't need to set it manually.
 
 ### Optional: LLM Provider API Keys
 
 Add API keys for the LLM providers you want to use:
 
-- `OPENAI_API_KEY` - For GPT-3.5, GPT-4, etc. (get from [OpenAI platform](https://platform.openai.com/api-keys))
+- `OPENAI_API_KEY` - For GPT-4, GPT-3.5, etc. (get from [OpenAI platform](https://platform.openai.com/api-keys))
 - `ANTHROPIC_API_KEY` - For Claude models (get from [Anthropic console](https://console.anthropic.com/))
+- `AZURE_API_KEY` / `AZURE_API_BASE` - For Azure OpenAI
+- `GOOGLE_APPLICATION_CREDENTIALS` - For Google Vertex AI
 
 **Note:** You can add these later in Railway's Variables tab for the LiteLLM service.
 
@@ -102,7 +96,7 @@ Want to configure which LLM models are available? Edit the LiteLLM configuration
 
 Railway deploys your services automatically. Here's what to expect:
 
-⏱️ **Typical deployment time:** 5-8 minutes for all services
+⏱️ **Typical deployment time:** 3-5 minutes for all services
 
 **How to monitor:**
 1. Railway dashboard shows real-time deployment status
@@ -111,27 +105,32 @@ Railway deploys your services automatically. Here's what to expect:
    - 🟢 Deployed (service is running)
    - 🔴 Failed (check logs for errors)
 
-**Success looks like:** All 7 service cards show 🟢 "Deployed" status
+**Success looks like:** All 3 service cards show 🟢 "Deployed" status
 
 **If something fails:** Click the service → "Logs" tab to see error details. Common issues are missing environment variables or invalid API keys.
 
-## Step 5: Access Your Services
+## Step 5: Access Your LiteLLM Proxy
 
-Once deployment completes, find your application URLs:
+Once deployment completes, find your application URL:
 
-**To access Open WebUI (main interface):**
-1. Click on the **openwebui** service in Railway dashboard
+**To access LiteLLM API:**
+1. Click on the **litellm** service in Railway dashboard
 2. Go to "Settings" tab
 3. Find the "Public Networking" section
-4. Generated domain will look like: `openwebui-production-xxxx.up.railway.app`
-5. Click the URL to open your chat interface
+4. Generate a public domain (will look like: `litellm-production-xxxx.up.railway.app`)
+5. Your LiteLLM proxy is now accessible at this URL!
 
-**Other service endpoints:**
-- **React Client**: Generate domain from `react-client` service (alternative frontend)
-- **R2R API**: Generate domain from `r2r` service (for document upload/search)
-- **LiteLLM API**: Internal only by default (accessible via Open WebUI)
+**Test your deployment:**
+```bash
+# Health check
+curl https://litellm-production-xxxx.up.railway.app/health
 
-🎉 **You're live!** Start chatting with your LLM stack.
+# List models (replace with your actual key)
+curl https://litellm-production-xxxx.up.railway.app/v1/models \
+  -H "Authorization: Bearer $LITELLM_MASTER_KEY"
+```
+
+🎉 **You're live!** Start routing LLM requests through your unified proxy.
 
 ## Optional: Detach and Customize
 
@@ -145,7 +144,7 @@ Want to modify the code or configuration? Detach your Railway project to get ful
 
 **Benefits:**
 - ✅ Full control over code and configuration
-- ✅ Ability to add custom services or modify existing ones
+- ✅ Ability to customize LiteLLM configuration
 - ✅ Track changes with Git version control
 - ✅ Collaborate with your team via GitHub
 
@@ -165,17 +164,27 @@ Now that you're running, explore these resources:
 
 - 📖 **Full Documentation**: See [`README.md`](README.md) for detailed architecture and service information
 - ⚙️ **Configuration Guide**: See [`ENV_VARIABLES_GUIDE.md`](ENV_VARIABLES_GUIDE.md) for all environment variables and advanced configuration
-- 🔧 **Troubleshooting**: Common issues and solutions (coming soon)
+- 🔧 **Troubleshooting**: Common issues and solutions below
 - 💻 **Local Development**: Want to run locally? See [`docs/local-dev/`](docs/local-dev/) for Kubernetes/Minikube setup
 
 **Configure your models:**
 - Edit [`services/litellm/config.yaml`](services/litellm/config.yaml) to add or remove LLM providers
 - Restart the LiteLLM service in Railway after changes
 
-**Add more services:**
-- Fork/detach to a GitHub repo
-- Add new services in `services/` directory
-- Railway auto-detects and deploys them
+**Integrate with your applications:**
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://litellm-production-xxxx.up.railway.app",
+    api_key="your-litellm-master-key"
+)
+
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+```
 
 ## Troubleshooting Quick Tips
 
@@ -188,25 +197,35 @@ Now that you're running, explore these resources:
 - Invalid API keys: Verify keys at provider's website
 - Port conflicts: Check `railway.toml` for correct port settings
 
-### ❌ Can't Access Open WebUI
+### ❌ Can't Access LiteLLM API
 
 **Symptom:** Generated domain shows error or won't load
 
 **Fix:** 
-1. Verify OpenWebUI service is "Deployed" (green)
-2. Check that `OPENAI_API_BASE_URL` points to `http://litellm.railway.internal:4000/v1`
-3. Verify `OPENAI_API_KEY` matches your `LITELLM_MASTER_KEY`
-4. Check LiteLLM service logs for connection errors
+1. Verify LiteLLM service is "Deployed" (green)
+2. Check that public networking is enabled and domain is generated
+3. Verify `LITELLM_MASTER_KEY` is set correctly
+4. Check LiteLLM service logs for startup errors
 
 ### ❌ LLM Requests Failing
 
-**Symptom:** Chat interface loads but can't generate responses
+**Symptom:** API responds but can't generate completions
 
 **Fix:**
 1. Verify you've added at least one LLM provider API key to LiteLLM service
 2. Check LiteLLM logs for API authentication errors
 3. Ensure your API keys are valid and have credits/quota
 4. Review [`services/litellm/config.yaml`](services/litellm/config.yaml) for model configuration
+
+### ❌ Database/Redis Connection Errors
+
+**Symptom:** LiteLLM starts but shows database/Redis connection warnings
+
+**Fix:**
+1. Verify PostgreSQL and Redis plugins are running (green)
+2. Check that `DATABASE_URL` and `REDIS_URL` are correctly set
+3. Ensure plugin names are exactly "Postgres" and "Redis"
+4. Redeploy LiteLLM service after fixing variables
 
 📖 **For more help:** Full troubleshooting guide coming soon. For now, check Railway logs and the [Railway Discord community](https://discord.gg/railway).
 

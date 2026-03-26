@@ -1,100 +1,400 @@
+# LiteLLM + PostgreSQL + Redis Stack
+# Simplified Kubernetes manifests for local development
+
+---
+# Namespace
 apiVersion: v1
-data:
-  config.yaml: "# LiteLLM Configuration File\n# This is a minimal configuration that
-    allows LiteLLM to start\n# API keys should be set via environment variables\n\nmodel_list:\n
-    \ # OpenAI models - requires OPENAI_API_KEY environment variable\n  - model_name:
-    gpt-4\n    litellm_params:\n      model: gpt-4\n      api_key: os.environ/OPENAI_API_KEY\n
-    \ \n  - model_name: gpt-4-turbo\n    litellm_params:\n      model: gpt-4-turbo-preview\n
-    \     api_key: os.environ/OPENAI_API_KEY\n  \n  - model_name: gpt-3.5-turbo\n
-    \   litellm_params:\n      model: gpt-3.5-turbo\n      api_key: os.environ/OPENAI_API_KEY\n
-    \ \n  # Anthropic models - requires ANTHROPIC_API_KEY environment variable\n  -
-    model_name: claude-3-opus\n    litellm_params:\n      model: claude-3-opus-20240229\n
-    \     api_key: os.environ/ANTHROPIC_API_KEY\n  \n  - model_name: claude-3-sonnet\n
-    \   litellm_params:\n      model: claude-3-sonnet-20240229\n      api_key: os.environ/ANTHROPIC_API_KEY\n
-    \ \n  - model_name: claude-3-haiku\n    litellm_params:\n      model: claude-3-haiku-20240307\n
-    \     api_key: os.environ/ANTHROPIC_API_KEY\n\n# General settings\ngeneral_settings:\n
-    \ master_key: os.environ/LITELLM_MASTER_KEY\n  \n  # Database settings (optional
-    - requires DATABASE_URL)\n  # database_url: os.environ/DATABASE_URL\n  \n  # Redis
-    settings (optional - requires REDIS_URL)\n  # redis_host: os.environ/REDIS_HOST\n
-    \ # redis_port: os.environ/REDIS_PORT\n\nlitellm_settings:\n  success_callback:
-    []\n  failure_callback: []\n  # Enable detailed logging\n  set_verbose: false\n"
-kind: ConfigMap
+kind: Namespace
 metadata:
+  name: llm-stack
   labels:
     app.kubernetes.io/part-of: llm-stack
-    env: development
-    managed-by: skaffold
-  name: dev-litellm-config
-  namespace: default
+    managed-by: kustomize
+
 ---
+# LiteLLM ConfigMap
 apiVersion: v1
-data:
-  POSTGRES_DB: r2r_db
-  POSTGRES_USER: postgres
 kind: ConfigMap
 metadata:
-  labels:
-    app.kubernetes.io/part-of: llm-stack
-    env: development
-    managed-by: skaffold
-  name: dev-postgres-config
-  namespace: default
----
-apiVersion: v1
+  name: litellm-config
+  namespace: llm-stack
 data:
-  anthropic-api-key: c2stYW50LWRldi1rZXktdGVzdA==
-  master-key: c2stZGV2LW1hc3Rlci1rZXktMTIzNDU2Nzg5MDEyMzQ1Njc4OTA=
-  openai-api-key: c2stcHJvai1kZXYta2V5LXRlc3Q=
+  config.yaml: |
+    # LiteLLM Configuration File
+    # Production-ready LiteLLM proxy with PostgreSQL and Redis
+    # API keys should be set via environment variables
+
+    model_list:
+      # OpenAI models - requires OPENAI_API_KEY environment variable
+      - model_name: gpt-4
+        litellm_params:
+          model: gpt-4
+          api_key: os.environ/OPENAI_API_KEY
+      
+      - model_name: gpt-4-turbo
+        litellm_params:
+          model: gpt-4-turbo-preview
+          api_key: os.environ/OPENAI_API_KEY
+      
+      - model_name: gpt-3.5-turbo
+        litellm_params:
+          model: gpt-3.5-turbo
+          api_key: os.environ/OPENAI_API_KEY
+      
+      # Anthropic models - requires ANTHROPIC_API_KEY environment variable
+      - model_name: claude-3-opus
+        litellm_params:
+          model: claude-3-opus-20240229
+          api_key: os.environ/ANTHROPIC_API_KEY
+      
+      - model_name: claude-3-sonnet
+        litellm_params:
+          model: claude-3-sonnet-20240229
+          api_key: os.environ/ANTHROPIC_API_KEY
+      
+      - model_name: claude-3-haiku
+        litellm_params:
+          model: claude-3-haiku-20240307
+          api_key: os.environ/ANTHROPIC_API_KEY
+
+    # General settings
+    general_settings:
+      master_key: os.environ/LITELLM_MASTER_KEY
+      
+      # Database settings for caching and logging (requires DATABASE_URL)
+      database_url: os.environ/DATABASE_URL
+      
+      # Redis settings for distributed caching and rate limiting
+      redis_host: os.environ/REDIS_HOST
+      redis_port: os.environ/REDIS_PORT
+
+    litellm_settings:
+      success_callback: []
+      failure_callback: []
+      # Enable detailed logging
+      set_verbose: false
+
+---
+# PostgreSQL Secret
+apiVersion: v1
 kind: Secret
 metadata:
-  labels:
-    env: development
-    managed-by: skaffold
-  name: dev-litellm-secret-767k7tgcb9
-  namespace: default
+  name: postgres-secret
+  namespace: llm-stack
 type: Opaque
----
-apiVersion: v1
-kind: Secret
-metadata:
-  labels:
-    app.kubernetes.io/part-of: llm-stack
-    env: development
-    managed-by: skaffold
-  name: dev-postgres-secret
-  namespace: default
 stringData:
   password: postgres-dev-password-123
-type: Opaque
+
 ---
+# PostgreSQL ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: llm-stack
+data:
+  POSTGRES_USER: postgres
+  POSTGRES_DB: litellm
+
+---
+# LiteLLM Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: litellm-secret
+  namespace: llm-stack
+type: Opaque
+stringData:
+  master-key: sk-dev-master-key-12345678901234567890
+  openai-api-key: ""
+  anthropic-api-key: ""
+
+---
+# PostgreSQL PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: llm-stack
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# Redis PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data
+  namespace: llm-stack
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# PostgreSQL StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: llm-stack
+  labels:
+    app: postgres
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: pgvector/pgvector:pg16
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: password
+        - name: POSTGRES_DB
+          value: litellm
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U postgres
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U postgres
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: postgres-data
+
+---
+# Redis StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: llm-stack
+  labels:
+    app: redis
+spec:
+  serviceName: redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+          name: redis
+        command:
+          - redis-server
+          - --appendonly
+          - "yes"
+          - --appendfsync
+          - "everysec"
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: redis-data
+
+---
+# LiteLLM Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litellm
+  namespace: llm-stack
+  labels:
+    app: litellm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: litellm
+  template:
+    metadata:
+      labels:
+        app: litellm
+    spec:
+      containers:
+      - name: litellm
+        image: ghcr.io/berriai/litellm:main-latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 4000
+          name: http
+        env:
+        - name: LITELLM_PORT
+          value: "4000"
+        - name: LITELLM_HOST
+          value: "0.0.0.0"
+        - name: LITELLM_MASTER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: litellm-secret
+              key: master-key
+        - name: DATABASE_URL
+          value: "postgresql://postgres:postgres-dev-password-123@postgres:5432/litellm"
+        - name: REDIS_HOST
+          value: "redis"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_PASSWORD
+          value: ""
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: litellm-secret
+              key: openai-api-key
+              optional: true
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: litellm-secret
+              key: anthropic-api-key
+              optional: true
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health/liveliness
+            port: 4000
+            httpHeaders:
+              - name: Authorization
+                value: "Bearer sk-dev-master-key-12345678901234567890"
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 4000
+          initialDelaySeconds: 30
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: litellm-config
+
+---
+# PostgreSQL Service
 apiVersion: v1
 kind: Service
 metadata:
+  name: postgres
+  namespace: llm-stack
+  labels:
+    app: postgres
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+
+---
+# Redis Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: llm-stack
+  labels:
+    app: redis
+spec:
+  clusterIP: None
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+
+---
+# LiteLLM Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: litellm
+  namespace: llm-stack
   labels:
     app: litellm
-    app.kubernetes.io/part-of: llm-stack
-    env: development
-    managed-by: skaffold
-  name: dev-litellm
-  namespace: default
 spec:
-  ports:
-  - port: 4000
-    protocol: TCP
-    targetPort: 4000
+  type: ClusterIP
   selector:
     app: litellm
-    app.kubernetes.io/part-of: llm-stack
-    env: development
-    managed-by: skaffold
-  type: ClusterIP
----
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app: openwebui
-    app.kubernetes.io/part-of: llm-stack
-    env: development
-    managed-by: skaffold
-  name: dev-openwebui
+  ports:
+  - port: 4000
+    targetPort: 4000
+    protocol: TCP

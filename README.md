@@ -1,23 +1,19 @@
-# LLM Stack Template
+# LiteLLM with Redis for Production
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/od9RFE?referralCode=qeah9u&utm_medium=integration&utm_source=template&utm_campaign=generic)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy?referralCode=YOUR_REFERRAL_CODE)
 
-A complete, production-ready AI application stack with one-click deployment to Railway. Get started with LLM-powered applications in minutes, not hours.
+Production-ready LiteLLM proxy with PostgreSQL and Redis. Unified API for 100+ LLM providers.
 
 ## Overview
 
-This template provides everything you need to build and deploy AI-powered applications:
+This stack provides a streamlined, production-ready LiteLLM deployment with persistent storage and caching:
 
 **Core Services:**
-- **LiteLLM** - Unified proxy for 100+ LLM providers (OpenAI, Anthropic, Azure, etc.)
-- **Open WebUI** - Beautiful chat interface with RAG support
-- **PostgreSQL w/pgvector** - Managed database with vector search capabilities
-- **Redis** - Managed cache for job queues and caching
-- **Qdrant** - High-performance vector database for embeddings
-- **R2R** - Retrieval-Augmented Generation framework
-- **React Client** - Modern frontend for custom integrations
+- **LiteLLM** - Unified proxy for 100+ LLM providers (OpenAI, Anthropic, Azure, Google, and more)
+- **PostgreSQL w/pgvector** - Managed database for caching, logging, and vector storage
+- **Redis** - High-performance cache for rate limiting, session management, and job queues
 
-**Primary Use Case:** Deploy a complete AI stack to Railway with minimal configuration. Everything is pre-configured and ready to use.
+**Primary Use Case:** Deploy a production-grade LLM proxy to Railway with minimal configuration. Route requests to multiple providers through a single, unified API endpoint with built-in caching and persistence.
 
 **Alternative:** Run locally using Minikube + Skaffold (see [Local Development](#local-development) section).
 
@@ -27,7 +23,7 @@ This template provides everything you need to build and deploy AI-powered applic
 
 ### ✨ **Recommended Method: One-Click Template Deployment**
 
-Deploy the entire stack to Railway in under 5 minutes:
+Deploy the stack to Railway in under 5 minutes:
 
 <div align="center">
 
@@ -36,7 +32,7 @@ Deploy the entire stack to Railway in under 5 minutes:
 </div>
 
 #### What Happens Automatically:
-1. ✅ All 7 services are deployed from the `services/` directory
+1. ✅ LiteLLM, PostgreSQL, and Redis services are deployed
 2. ✅ PostgreSQL and Redis plugins are added and configured
 3. ✅ Service-to-service networking is set up
 4. ✅ Environment variables are pre-configured with Railway references
@@ -49,9 +45,9 @@ Deploy the entire stack to Railway in under 5 minutes:
 #### Deployment Steps:
 1. Click the **"Deploy to Railway"** button above
 2. Railway will prompt you for required environment variables
-3. Click **"Deploy"** and wait 5-10 minutes
-4. Generate a public domain for **openwebui** service
-5. Access your AI stack at the generated URL!
+3. Click **"Deploy"** and wait 3-5 minutes
+4. Generate a public domain for the **litellm** service
+5. Access your LiteLLM proxy at the generated URL!
 
 **📚 Detailed Guide:** See [`QUICK_START_RAILWAY.md`](QUICK_START_RAILWAY.md:1) for step-by-step instructions with screenshots.
 
@@ -63,13 +59,9 @@ Deploy the entire stack to Railway in under 5 minutes:
 
 | Service | Port | Description | Documentation |
 |---------|------|-------------|---------------|
-| **LiteLLM** | 4000 | OpenAI-compatible proxy for 100+ LLM providers. Handles API key management, load balancing, and fallbacks. | [`services/litellm/README.md`](services/litellm/README.md:1) |
-| **Open WebUI** | 8080 | Feature-rich chat interface with RAG, document upload, conversation history, and model switching. | [`services/openwebui/README.md`](services/openwebui/README.md:1) |
-| **PostgreSQL** | - | Managed database with pgvector extension for vector storage and document metadata. | [`services/postgres-pgvector/README.md`](services/postgres-pgvector/README.md:1) |
-| **Redis** | - | Managed cache for R2R job queues, session management, and caching. | Railway Plugin |
-| **Qdrant** | 6333 | High-performance vector database optimized for similarity search and embeddings. | [`services/qdrant/README.md`](services/qdrant/README.md:1) |
-| **R2R** | 7272 | Complete RAG framework with document ingestion, chunking, embedding, and retrieval. | [`services/r2r/README.md`](services/r2r/README.md:1) |
-| **React Client** | 3000 | Modern React frontend template for building custom AI-powered applications. | [`services/react-client/README.md`](services/react-client/README.md:1) |
+| **LiteLLM** | 4000 | OpenAI-compatible proxy for 100+ LLM providers. Handles API key management, load balancing, caching, and fallbacks. | [`services/litellm/README.md`](services/litellm/README.md:1) |
+| **PostgreSQL** | - | Managed database with pgvector extension for caching, logging, and vector storage. | [`services/postgres-pgvector/README.md`](services/postgres-pgvector/README.md:1) |
+| **Redis** | - | Managed cache for rate limiting, session management, and distributed caching. | Railway Plugin |
 
 **Service Communication:**
 - All services communicate via Railway's internal private network (`*.railway.internal`)
@@ -88,8 +80,10 @@ The Railway template pre-configures most variables automatically. You only need 
 - `LITELLM_MASTER_KEY` - Authentication key for your LiteLLM proxy
 
 **Optional (for LLM access):**
-- `OPENAI_API_KEY` - OpenAI models (GPT-3.5, GPT-4, etc.)
+- `OPENAI_API_KEY` - OpenAI models (GPT-4, GPT-3.5, etc.)
 - `ANTHROPIC_API_KEY` - Anthropic models (Claude)
+- `AZURE_API_KEY` / `AZURE_API_BASE` - Azure OpenAI
+- `GOOGLE_APPLICATION_CREDENTIALS` - Google Vertex AI
 - Additional provider keys as needed
 
 **📖 Complete Reference:** See [`ENV_VARIABLES_GUIDE.md`](ENV_VARIABLES_GUIDE.md:1) for all available configuration options.
@@ -114,11 +108,57 @@ After modifying the config, push changes to your repository and Railway will aut
 
 ---
 
+## Usage Examples
+
+### Basic API Call
+
+```bash
+curl -X POST http://litellm.railway.internal:4000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+  -d '{
+    "model": "gpt-4",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+```
+
+### List Available Models
+
+```bash
+curl http://litellm.railway.internal:4000/v1/models \
+  -H "Authorization: Bearer $LITELLM_MASTER_KEY"
+```
+
+### Health Check
+
+```bash
+curl http://litellm.railway.internal:4000/health
+```
+
+### Using with OpenAI SDK
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://litellm.railway.internal:4000",
+    api_key="your-litellm-master-key"
+)
+
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+print(response.choices[0].message.content)
+```
+
+---
+
 ## Local Development
 
 ### Alternative: Run Locally with Minikube
 
-For local development and testing, you can run the entire stack on your machine using Kubernetes.
+For local development and testing, you can run the stack on your machine using Kubernetes.
 
 **Prerequisites:**
 - [Docker](https://www.docker.com/) or [Podman](https://podman.io/)
@@ -134,8 +174,8 @@ minikube start --cpus=4 --memory=8192
 # Deploy all services
 kubectl apply -f k8s/manifests.yaml
 
-# Access services via port-forwarding
-kubectl port-forward svc/openwebui 8080:8080
+# Access LiteLLM via port-forwarding
+kubectl port-forward svc/litellm 4000:4000
 ```
 
 **📚 Comprehensive Guides:**
@@ -150,45 +190,38 @@ kubectl port-forward svc/openwebui 8080:8080
 
 ## Architecture
 
-The stack uses a microservices architecture with internal service mesh:
+The stack uses a streamlined microservices architecture:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Railway Platform                         │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐     │
-│  │ React Client │───▶│ OpenWebUI    │───▶│  LiteLLM     │     │
-│  │   :3000      │    │   :8080      │    │   :4000      │     │
-│  └──────────────┘    └──────────────┘    └──────┬───────┘     │
-│                                                     │            │
-│                                                     ▼            │
-│                                              External LLM APIs  │
-│                                                                  │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐     │
-│  │     R2R      │◀───│   Qdrant     │    │ PostgreSQL   │     │
-│  │   :7272      │    │   :6333      │    │   (Plugin)   │     │
-│  └──────┬───────┘    └──────────────┘    └──────────────┘     │
-│         │                                           │           │
-│         └───────────────────────────────────────────┘           │
-│                              │                                  │
-│                              ▼                                  │
-│                         ┌──────────┐                           │
-│                         │  Redis   │                           │
-│                         │ (Plugin) │                           │
-│                         └──────────┘                           │
+│                         ┌──────────────┐                        │
+│                         │   LiteLLM    │                        │
+│  External Clients ───▶  │   :4000      │                        │
+│                         └──────┬───────┘                        │
+│                                │                                 │
+│              ┌─────────────────┼─────────────────┐               │
+│              │                 │                 │               │
+│              ▼                 ▼                 ▼               │
+│       ┌──────────┐      ┌──────────┐      ┌──────────┐          │
+│       │ PostgreSQL│      │   Redis   │      │ External │          │
+│       │  (Plugin) │      │  (Plugin) │      │ LLM APIs │          │
+│       └──────────┘      └──────────┘      └──────────┘          │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 **Key Communication Paths:**
-- **Frontend → Backend:** React Client or Users → OpenWebUI (port 8080)
-- **LLM Routing:** OpenWebUI → LiteLLM → External LLM APIs
-- **RAG Pipeline:** R2R → Qdrant (vectors) + PostgreSQL (metadata) + Redis (caching)
+- **Clients → LiteLLM:** External clients connect to LiteLLM proxy (port 4000)
+- **LiteLLM → LLM APIs:** LiteLLM routes requests to configured LLM providers
+- **LiteLLM → PostgreSQL:** Caching, logging, and request tracking
+- **LiteLLM → Redis:** Distributed caching and rate limiting
 
 **Internal DNS:** All services use Railway's private networking (`service-name.railway.internal`) for secure, low-latency communication.
 
-**📖 Architecture Deep-Dive:** See [`plans/railway-template-architecture.md`](plans/railway-template-architecture.md:1) for detailed information.
+**📖 Architecture Deep-Dive:** See [`docs/architecture/OVERVIEW.md`](docs/architecture/OVERVIEW.md:1) for detailed information.
 
 ---
 
@@ -196,15 +229,10 @@ The stack uses a microservices architecture with internal service mesh:
 
 ### Common Issues
 
-**Service Won't Start**
+**LiteLLM Won't Start**
 1. Check service logs in Railway dashboard → Select service → "Logs" tab
-2. Verify all required environment variables are set
+2. Verify `LITELLM_MASTER_KEY` is set
 3. Ensure PostgreSQL and Redis plugins show "Running" status
-
-**Connection Errors Between Services**
-1. Verify internal DNS names use `*.railway.internal` format
-2. Check that services are using correct ports in environment variables
-3. Review Railway project service dependencies
 
 **LLM API Errors**
 1. Verify your LLM provider API keys are valid and have sufficient credits
@@ -214,7 +242,12 @@ The stack uses a microservices architecture with internal service mesh:
 **Database Connection Issues**
 1. Confirm PostgreSQL plugin is added and running
 2. Verify `${{Postgres.*}}` variables are correctly referenced
-3. Check R2R service logs for connection errors
+3. Check LiteLLM service logs for connection errors
+
+**Redis Connection Issues**
+1. Confirm Redis plugin is added and running
+2. Verify `${{Redis.REDIS_URL}}` variable is correctly referenced
+3. Check LiteLLM service logs for Redis connection errors
 
 **Need More Help?**
 - Check individual service READMEs in `services/` directories
@@ -252,9 +285,8 @@ This project is licensed under the MIT License - see the [`LICENSE`](LICENSE:1) 
 **Documentation:**
 - [Railway Documentation](https://docs.railway.app)
 - [LiteLLM Documentation](https://docs.litellm.ai)
-- [Open WebUI Documentation](https://docs.openwebui.com)
-- [R2R Documentation](https://docs.r2r.dev)
-- [Qdrant Documentation](https://qdrant.tech/documentation)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [Redis Documentation](https://redis.io/documentation)
 
 **Acknowledgments:**
-Built with [Railway](https://railway.app) • Powered by [R2R](https://github.com/SciPhi-AI/R2R), [Qdrant](https://qdrant.tech), [LiteLLM](https://github.com/BerriAI/litellm), and [Open WebUI](https://github.com/open-webui/open-webui)
+Built with [Railway](https://railway.app) • Powered by [LiteLLM](https://github.com/BerriAI/litellm)

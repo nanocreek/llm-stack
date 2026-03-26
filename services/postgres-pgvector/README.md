@@ -4,25 +4,19 @@ Production-ready PostgreSQL 16 database with pgvector extension for vector stora
 
 ## Overview
 
-This service provides PostgreSQL 16 with the pgvector extension pre-installed. While the main [`llm-stack`](../../README.md) deployment uses **Qdrant** for primary vector storage, this service is available for applications that specifically require pgvector.
+This service provides PostgreSQL 16 with the pgvector extension pre-installed. It serves as the persistent storage layer for LiteLLM caching, logging, and optional vector storage.
 
-### When to Use This Service
+### Use Cases
 
-**Use Qdrant (recommended for this stack)**:
-- Primary vector storage for R2R
-- High-performance similarity search
-- Scalable vector operations
-- The default and recommended option
-
-**Use postgres-pgvector when**:
-- You specifically need pgvector for compatibility
-- Migrating from existing pgvector deployments
-- Local development matching pgvector-based systems
-- Additional vector storage requirements
+**Primary uses in this stack:**
+- LiteLLM request caching and logging
+- API call tracking and analytics
+- Vector storage for embeddings (optional)
+- Session persistence
 
 ## Railway Deployment
 
-This service is designed to deploy as part of the parent [`llm-stack`](../../README.md) Railway template. For standalone deployment:
+This service is designed to deploy as part of the parent [`llm-stack`](../README.md) Railway template. For standalone deployment:
 
 1. Create new Railway service from GitHub repo
 2. Set root directory: `services/postgres-pgvector`
@@ -35,7 +29,7 @@ This service is designed to deploy as part of the parent [`llm-stack`](../../REA
 |----------|-------------|---------|----------|
 | `POSTGRES_USER` | Database user | `postgres` | No |
 | `POSTGRES_PASSWORD` | Database password | None | **Yes** |
-| `POSTGRES_DB` | Database name | `r2r` | No |
+| `POSTGRES_DB` | Database name | `litellm` | No |
 | `POSTGRES_HOST_AUTH_METHOD` | Authentication method | `md5` | No |
 
 **Security Note**: Always set a strong `POSTGRES_PASSWORD` in production.
@@ -80,6 +74,16 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 ## Usage
 
+### LiteLLM Caching
+
+LiteLLM automatically uses PostgreSQL for caching when `DATABASE_URL` is configured:
+
+```yaml
+# In litellm config or environment
+general_settings:
+  database_url: os.environ/DATABASE_URL
+```
+
 ### Creating Vector Columns
 
 ```sql
@@ -117,12 +121,12 @@ LIMIT 10;
 docker run -d \
   -p 5432:5432 \
   -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=r2r \
+  -e POSTGRES_DB=litellm \
   -v postgres_data:/var/lib/postgresql/data \
   pgvector/pgvector:pg16
 
 # Connect
-psql postgresql://postgres:postgres@localhost:5432/r2r
+psql postgresql://postgres:postgres@localhost:5432/litellm
 ```
 
 ### Using Docker Compose
@@ -136,7 +140,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: r2r
+      POSTGRES_DB: litellm
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -170,23 +174,6 @@ volumes:
 2. Tune PostgreSQL parameters for your workload
 3. Monitor query performance with `EXPLAIN ANALYZE`
 4. Consider increasing Railway resource allocation
-
-## Important Notes
-
-### Default Stack Uses Qdrant
-
-The main [`llm-stack`](../../README.md) deployment uses **Qdrant** as the primary vector database, not pgvector. This service is included for:
-- Optional pgvector compatibility
-- Local development scenarios
-- Specific use cases requiring pgvector
-
-### R2R Configuration
-
-If using R2R with this postgres-pgvector service instead of Qdrant:
-1. Set `R2R_VECTOR_DB_PROVIDER=pgvector` in R2R environment
-2. Configure PostgreSQL connection in R2R
-3. Disable Qdrant-related configuration
-4. See [`services/r2r/README.md`](../r2r/README.md) for details
 
 ## Version Information
 

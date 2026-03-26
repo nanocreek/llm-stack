@@ -51,7 +51,7 @@ The Dockerfile uses:
 
 ## Service-to-Service Communication
 
-From the React Client, R2R, or other services, you can reach LiteLLM using:
+Services within the Railway project can reach LiteLLM using:
 ```
 http://litellm.railway.internal:4000
 ```

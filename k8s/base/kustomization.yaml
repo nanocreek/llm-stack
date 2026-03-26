@@ -14,17 +14,9 @@ resources:
   - postgres-service.yaml
   - redis-statefulset.yaml
   - redis-service.yaml
-  - qdrant-deployment.yaml
-  - qdrant-service.yaml
-  - litellm-deployment.yaml
   - litellm-configmap.yaml
+  - litellm-deployment.yaml
   - litellm-service.yaml
-  - r2r-deployment.yaml
-  - r2r-service.yaml
-  - openwebui-deployment.yaml
-  - openwebui-service.yaml
-  - react-client-deployment.yaml
-  - react-client-service.yaml
 
 patchesStrategicMerge: []
 

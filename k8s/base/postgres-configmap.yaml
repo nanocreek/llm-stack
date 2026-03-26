@@ -13,4 +13,4 @@ metadata:
   name: postgres-config
 data:
   POSTGRES_USER: postgres
-  POSTGRES_DB: r2r_db
+  POSTGRES_DB: litellm

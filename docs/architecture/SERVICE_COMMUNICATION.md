@@ -1,6 +1,6 @@
 # Service Communication
 
-This document explains how services in the LLM Stack communicate with each other, including communication patterns, service discovery, authentication flows, and debugging techniques.
+This document explains how services in the LiteLLM Stack communicate with each other, including communication patterns, service discovery, authentication flows, and debugging techniques.
 
 ## Table of Contents
 
@@ -21,10 +21,9 @@ This document explains how services in the LLM Stack communicate with each other
 **Pattern**: Request-response model for immediate data retrieval or processing.
 
 **Use Cases**:
-- Chat completions (Open WebUI → LiteLLM)
-- Vector search queries (R2R → Qdrant)
-- Document ingestion (Client → R2R)
-- Health checks (Railway → All Services)
+- Chat completions (Client → LiteLLM)
+- Embedding generation (Client → LiteLLM)
+- Health checks (Railway → LiteLLM)
 
 **Characteristics**:
 - Blocking operation
@@ -34,13 +33,11 @@ This document explains how services in the LLM Stack communicate with each other
 
 **Example Flow**:
 ```
-Client → OpenWebUI:8080/api/chat
-         ↓
-         OpenWebUI → LiteLLM:4000/v1/chat/completions
-                     ↓
-                     LiteLLM → External LLM API
-                     ↓
-                     Response → OpenWebUI → Client
+Client → LiteLLM:4000/v1/chat/completions
+          ↓
+          LiteLLM → External LLM API
+          ↓
+          Response → Client
 ```
 
 ---
@@ -50,10 +47,9 @@ Client → OpenWebUI:8080/api/chat
 **Pattern**: Persistent TCP connections to PostgreSQL for efficient database access.
 
 **Use Cases**:
-- User authentication (Open WebUI → PostgreSQL)
-- Conversation history storage (Open WebUI → PostgreSQL)
-- Document metadata (R2R → PostgreSQL)
-- API logging (LiteLLM → PostgreSQL, optional)
+- API logging (LiteLLM → PostgreSQL)
+- Response caching (LiteLLM → PostgreSQL)
+- Analytics and audit trails
 
 **Characteristics**:
 - Long-lived connections
@@ -73,13 +69,12 @@ max_overflow = 20  # Additional connections if pool exhausted
 
 ### 3. Cache Operations (Redis)
 
-**Pattern**: High-speed key-value operations for session data and caching.
+**Pattern**: High-speed key-value operations for response caching.
 
 **Use Cases**:
-- Session management (Open WebUI → Redis)
 - Response caching (LiteLLM → Redis)
-- Job queue (R2R → Redis)
 - Rate limiting (LiteLLM → Redis)
+- Session management (optional)
 
 **Characteristics**:
 - Sub-millisecond latency
@@ -89,41 +84,15 @@ max_overflow = 20  # Additional connections if pool exhausted
 
 **Operation Types**:
 ```bash
-# Session storage
-SET openwebui:session:{id} {data} EX 86400
-
 # Cache check
 GET litellm:cache:{model}:{hash}
 
-# Queue operation
-LPUSH r2r:queue:pending {job_data}
-```
+# Cache store with TTL
+SET litellm:cache:{model}:{hash} {response} EX 3600
 
----
-
-### 4. Vector Operations (Qdrant)
-
-**Pattern**: Specialized vector similarity search and storage operations.
-
-**Use Cases**:
-- Store document embeddings (R2R → Qdrant)
-- Similarity search (R2R → Qdrant)
-- Collection management (R2R → Qdrant)
-- Direct search (Open WebUI → Qdrant, optional)
-
-**Characteristics**:
-- RESTful HTTP API (primary)
-- gRPC API (high-performance option)
-- Batch operations for efficiency
-- Asynchronous indexing
-
-**API Types**:
-```bash
-# HTTP REST (Port 6333)
-POST /collections/{name}/points/search
-
-# gRPC (Port 6334)
-# Higher performance for high-volume operations
+# Rate limiting
+INCR litellm:ratelimit:{key}
+EXPIRE litellm:ratelimit:{key} 60
 ```
 
 ---
@@ -143,10 +112,6 @@ Railway automatically provides DNS-based service discovery using the `.railway.i
 | Service | Internal DNS | Port |
 |---------|-------------|------|
 | LiteLLM | `litellm.railway.internal` | 4000 |
-| Open WebUI | `openwebui.railway.internal` | 8080 |
-| R2R | `r2r.railway.internal` | 7272 |
-| Qdrant | `qdrant.railway.internal` | 6333, 6334 |
-| React Client | `react-client.railway.internal` | 3000 |
 
 **Plugin Services** (PostgreSQL, Redis):
 - Use Railway variable interpolation: `${{Postgres.PGHOST}}`
@@ -181,7 +146,6 @@ curl http://litellm.railway.internal:4000/health
 ```bash
 # Direct hostname reference
 LITELLM_URL=http://litellm.railway.internal:4000
-QDRANT_HOST=qdrant.railway.internal
 ```
 
 **For Railway Plugins**:
@@ -215,7 +179,7 @@ LiteLLM validates key → Process request → Return response
 # LiteLLM service
 LITELLM_MASTER_KEY=sk-your-master-key-here
 
-# Open WebUI (as LiteLLM client)
+# Client using LiteLLM
 OPENAI_API_KEY=sk-your-master-key-here  # Must match LITELLM_MASTER_KEY
 ```
 
@@ -227,33 +191,7 @@ OPENAI_API_KEY=sk-your-master-key-here  # Must match LITELLM_MASTER_KEY
 
 ---
 
-### 2. Qdrant Authentication
-
-**Mechanism**: API key header authentication.
-
-**Flow**:
-```
-Client/Service → Qdrant
-Request Headers:
-  api-key: {QDRANT_API_KEY}
-
-Qdrant validates key → Process request → Return response
-```
-
-**Configuration**:
-```bash
-# Qdrant service
-QDRANT_API_KEY=your-secure-api-key
-
-# R2R service (as Qdrant client)
-R2R_QDRANT_API_KEY=your-secure-api-key  # Must match
-```
-
-**Optional**: Qdrant can run without authentication for internal development, but API key is **strongly recommended** for production.
-
----
-
-### 3. PostgreSQL Authentication
+### 2. PostgreSQL Authentication
 
 **Mechanism**: Username/password authentication via connection string.
 
@@ -277,7 +215,7 @@ postgresql://{PGUSER}:{PGPASSWORD}@{PGHOST}:{PGPORT}/{PGDATABASE}
 
 ---
 
-### 4. Redis Authentication
+### 3. Redis Authentication
 
 **Mechanism**: Password authentication (optional) via connection URL.
 
@@ -296,30 +234,6 @@ Redis validates password (if set) → Establishes connection
 
 ---
 
-### 5. Open WebUI Session Management
-
-**Mechanism**: Session cookies with Redis backend.
-
-**Flow**:
-```
-User Login → Open WebUI
-           ↓
-  Generate session ID + Store in Redis
-           ↓
-  Set-Cookie: session_id={id}; HttpOnly; Secure
-           ↓
-Subsequent Requests → Validate session from Redis
-```
-
-**Configuration**:
-```bash
-WEBUI_SECRET_KEY=your-secret-key-here  # For cookie signing
-SESSION_COOKIE_SECURE=true  # HTTPS only in production
-REDIS_URL=${{Redis.REDIS_URL}}  # Session storage
-```
-
----
-
 ## Key Internal API Endpoints
 
 ### LiteLLM (Port 4000)
@@ -329,6 +243,7 @@ REDIS_URL=${{Redis.REDIS_URL}}  # Session storage
 | Endpoint | Method | Purpose | Authentication |
 |----------|--------|---------|----------------|
 | `/health` | GET | Health check | None |
+| `/health/liveliness` | GET | Liveness probe | None |
 | `/v1/models` | GET | List available models | Bearer token |
 | `/v1/chat/completions` | POST | Chat completion | Bearer token |
 | `/v1/completions` | POST | Text completion | Bearer token |
@@ -347,88 +262,6 @@ curl -X POST http://litellm.railway.internal:4000/v1/chat/completions \
 
 ---
 
-### Open WebUI (Port 8080)
-
-**Base URL**: `http://openwebui.railway.internal:8080`
-
-| Endpoint | Method | Purpose | Authentication |
-|----------|--------|---------|----------------|
-| `/` | GET | Web UI / Health check | None |
-| `/api/chat` | POST | Chat interaction | Session cookie |
-| `/api/documents` | POST | Upload document | Session cookie |
-| `/api/auth/signin` | POST | User login | None |
-
-**Example**:
-```bash
-# Access web interface
-curl http://openwebui.railway.internal:8080/
-
-# API requires authentication (session cookie)
-```
-
----
-
-### R2R (Port 7272)
-
-**Base URL**: `http://r2r.railway.internal:7272`
-
-| Endpoint | Method | Purpose | Authentication |
-|----------|--------|---------|----------------|
-| `/health` | GET | Health check | None |
-| `/v3/health` | GET | Detailed health status | None |
-| `/v3/ingest` | POST | Ingest documents | Optional API key |
-| `/v3/rag` | POST | RAG query | Optional API key |
-| `/v3/search` | POST | Vector search | Optional API key |
-| `/v3/documents` | GET | List documents | Optional API key |
-
-**Example**:
-```bash
-# Health check
-curl http://r2r.railway.internal:7272/health
-
-# Ingest document
-curl -X POST http://r2r.railway.internal:7272/v3/ingest \
-  -H "Content-Type: application/json" \
-  -d '{
-    "document": {
-      "text": "Document content",
-      "metadata": {"title": "Example"}
-    }
-  }'
-```
-
----
-
-### Qdrant (Port 6333 HTTP, 6334 gRPC)
-
-**Base URL**: `http://qdrant.railway.internal:6333`
-
-| Endpoint | Method | Purpose | Authentication |
-|----------|--------|---------|----------------|
-| `/health` | GET | Health check | None |
-| `/readyz` | GET | Readiness probe | None |
-| `/metrics` | GET | Prometheus metrics | None |
-| `/collections` | GET | List collections | API key |
-| `/collections/{name}/points/search` | POST | Vector search | API key |
-| `/collections/{name}/points` | PUT | Insert vectors | API key |
-
-**Example**:
-```bash
-# Health check (no auth)
-curl http://qdrant.railway.internal:6333/health
-
-# Search (requires API key)
-curl -X POST http://qdrant.railway.internal:6333/collections/docs/points/search \
-  -H "api-key: $QDRANT_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "vector": [0.1, 0.2, ...],
-    "limit": 10
-  }'
-```
-
----
-
 ## Environment Variables for Communication
 
 ### LiteLLM Service
@@ -442,92 +275,12 @@ LITELLM_MASTER_KEY=sk-your-key-here
 # Optional: Database and cache
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 REDIS_URL=${{Redis.REDIS_URL}}
+REDIS_HOST=${{Redis.REDIS_HOST}}
+REDIS_PORT=${{Redis.REDIS_PORT}}
 
 # LLM provider API keys
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
-```
-
----
-
-### Open WebUI Service
-
-```bash
-# Server configuration
-PORT=8080
-
-# LiteLLM connection
-OPENAI_API_BASE_URL=http://litellm.railway.internal:4000/v1
-OPENAI_API_KEY=sk-your-key-here  # Must match LITELLM_MASTER_KEY
-
-# Database and cache
-DATABASE_URL=${{Postgres.DATABASE_URL}}
-REDIS_URL=${{Redis.REDIS_URL}}
-
-# Qdrant connection (for RAG features)
-VECTOR_DB=qdrant
-QDRANT_URI=http://qdrant.railway.internal:6333
-QDRANT_HOST=qdrant.railway.internal
-QDRANT_PORT=6333
-
-# Security
-WEBUI_SECRET_KEY=your-secret-key-here
-```
-
----
-
-### R2R Service
-
-```bash
-# Server configuration
-R2R_HOST=0.0.0.0
-R2R_PORT=7272
-
-# PostgreSQL connection
-R2R_POSTGRES_HOST=${{Postgres.PGHOST}}
-R2R_POSTGRES_PORT=${{Postgres.PGPORT}}
-R2R_POSTGRES_USER=${{Postgres.PGUSER}}
-R2R_POSTGRES_PASSWORD=${{Postgres.PGPASSWORD}}
-R2R_POSTGRES_DBNAME=${{Postgres.PGDATABASE}}
-
-# Qdrant connection
-R2R_VECTOR_DB_PROVIDER=qdrant
-R2R_QDRANT_HOST=qdrant.railway.internal
-R2R_QDRANT_PORT=6333
-
-# Redis connection
-REDIS_URL=${{Redis.REDIS_URL}}
-
-# LiteLLM connection (optional)
-LITELLM_URL=http://litellm.railway.internal:4000
-```
-
----
-
-### Qdrant Service
-
-```bash
-# Ports
-QDRANT__SERVICE__HTTP_PORT=6333
-QDRANT__SERVICE__GRPC_PORT=6334
-
-# Security
-QDRANT_API_KEY=your-secure-api-key
-
-# Optional: Performance tuning
-QDRANT__LOG_LEVEL=info
-```
-
----
-
-### React Client Service
-
-```bash
-# Server configuration
-PORT=3000
-
-# Backend API
-VITE_API_BASE_URL=http://openwebui.railway.internal:8080
 ```
 
 ---
@@ -552,7 +305,7 @@ curl: (7) Failed to connect to service
 2. Check service logs for startup errors
 3. Confirm hostname uses `.railway.internal` suffix
 4. Wait for health checks to pass (check Railway status)
-5. Test with health endpoint first: `curl http://service.railway.internal:port/health`
+5. Test with health endpoint first: `curl http://litellm.railway.internal:4000/health`
 
 ---
 
@@ -566,30 +319,19 @@ Authentication failed
 ```
 
 **Causes**:
-- Mismatched API keys between services
-- Missing Authorization header
-- Expired or invalid credentials
+- Missing or incorrect API key
+- Invalid credentials
 
 **Solutions**:
 
 **For LiteLLM**:
 ```bash
-# Verify both services have matching keys
+# Verify correct key is set
 # LiteLLM service:
 LITELLM_MASTER_KEY=sk-abc123
 
-# Open WebUI service:
-OPENAI_API_KEY=sk-abc123  # Must match exactly
-```
-
-**For Qdrant**:
-```bash
-# Verify both services have matching keys
-# Qdrant service:
-QDRANT_API_KEY=secure-key
-
-# R2R service:
-R2R_QDRANT_API_KEY=secure-key  # Must match
+# Client:
+Authorization: Bearer sk-abc123  # Must match exactly
 ```
 
 ---
@@ -613,7 +355,6 @@ Connection timed out
 2. Check service resource allocation (CPU, memory)
 3. Review service logs for slow operations
 4. Implement retry logic with exponential backoff
-5. Consider async operations for long-running tasks
 
 **Example timeout configuration**:
 ```python
@@ -629,7 +370,7 @@ response = client.post(url, json=data)
 
 **Symptoms**:
 ```
-getaddrinfo ENOTFOUND service.railway.internal
+getaddrinfo ENOTFOUND litellm.railway.internal
 Could not resolve hostname
 ```
 
@@ -652,7 +393,6 @@ Could not resolve hostname
 ```
 Empty reply from server
 Connection reset by peer
-404 Not Found (on wrong service)
 ```
 
 **Causes**:
@@ -668,10 +408,6 @@ Connection reset by peer
 **Correct Ports**:
 ```bash
 litellm.railway.internal:4000      # LiteLLM
-openwebui.railway.internal:8080    # Open WebUI
-r2r.railway.internal:7272          # R2R
-qdrant.railway.internal:6333       # Qdrant HTTP
-qdrant.railway.internal:6334       # Qdrant gRPC
 ```
 
 ---
@@ -680,58 +416,27 @@ qdrant.railway.internal:6334       # Qdrant gRPC
 
 ### Health Check Testing
 
-Test all services are accessible:
+Test LiteLLM is accessible:
 
 ```bash
 # LiteLLM
 curl http://litellm.railway.internal:4000/health
 # Expected: {"status": "healthy"}
-
-# Open WebUI
-curl http://openwebui.railway.internal:8080/
-# Expected: HTML content (200 OK)
-
-# R2R
-curl http://r2r.railway.internal:7272/health
-# Expected: {"status": "ok"}
-
-# Qdrant
-curl http://qdrant.railway.internal:6333/health
-# Expected: {"status": "ok"}
 ```
 
 ---
 
 ### End-to-End Communication Test
 
-**1. Store a vector in Qdrant via R2R**:
-```bash
-curl -X POST http://r2r.railway.internal:7272/v3/ingest \
-  -H "Content-Type: application/json" \
-  -d '{
-    "document": {
-      "text": "Railway makes deployment easy",
-      "metadata": {"source": "test"}
-    }
-  }'
-```
-
-**2. Query via LiteLLM**:
+**1. Test LiteLLM Chat Completion**:
 ```bash
 curl -X POST http://litellm.railway.internal:4000/v1/chat/completions \
   -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gpt-4",
-    "messages": [{"role": "user", "content": "What is Railway?"}]
+    "messages": [{"role": "user", "content": "Hello!"}]
   }'
-```
-
-**3. Test RAG pipeline via R2R**:
-```bash
-curl -X POST http://r2r.railway.internal:7272/v3/rag \
-  -H "Content-Type: application/json" \
-  -d '{"query": "Tell me about deployment"}'
 ```
 
 ---
@@ -744,44 +449,26 @@ import os
 
 # Service endpoints
 LITELLM_URL = "http://litellm.railway.internal:4000"
-R2R_URL = "http://r2r.railway.internal:7272"
-QDRANT_URL = "http://qdrant.railway.internal:6333"
 
 # Authentication
 LITELLM_KEY = os.getenv("LITELLM_MASTER_KEY")
-QDRANT_KEY = os.getenv("QDRANT_API_KEY")
 
 # LiteLLM chat completion
-def chat_completion(message: str):
+def chat_completion(message: str, model: str = "gpt-4"):
     response = httpx.post(
         f"{LITELLM_URL}/v1/chat/completions",
         headers={"Authorization": f"Bearer {LITELLM_KEY}"},
         json={
-            "model": "gpt-4",
+            "model": model,
             "messages": [{"role": "user", "content": message}]
         },
-        timeout=30.0
-    )
-    return response.json()
-
-# R2R document ingestion
-def ingest_document(text: str, metadata: dict):
-    response = httpx.post(
-        f"{R2R_URL}/v3/ingest",
-        json={"document": {"text": text, "metadata": metadata}},
         timeout=60.0
     )
     return response.json()
 
-# Qdrant search
-def search_vectors(collection: str, vector: list, limit: int = 10):
-    response = httpx.post(
-        f"{QDRANT_URL}/collections/{collection}/points/search",
-        headers={"api-key": QDRANT_KEY},
-        json={"vector": vector, "limit": limit},
-        timeout=10.0
-    )
-    return response.json()
+# Example usage
+result = chat_completion("What is LiteLLM?")
+print(result["choices"][0]["message"]["content"])
 ```
 
 ---
@@ -791,15 +478,12 @@ def search_vectors(collection: str, vector: list, limit: int = 10):
 ```typescript
 // Service endpoints
 const LITELLM_URL = "http://litellm.railway.internal:4000";
-const R2R_URL = "http://r2r.railway.internal:7272";
-const QDRANT_URL = "http://qdrant.railway.internal:6333";
 
 // Authentication
 const LITELLM_KEY = process.env.LITELLM_MASTER_KEY;
-const QDRANT_KEY = process.env.QDRANT_API_KEY;
 
 // LiteLLM chat completion
-async function chatCompletion(message: string) {
+async function chatCompletion(message: string, model: string = "gpt-4") {
   const response = await fetch(`${LITELLM_URL}/v1/chat/completions`, {
     method: "POST",
     headers: {
@@ -807,40 +491,16 @@ async function chatCompletion(message: string) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "gpt-4",
+      model: model,
       messages: [{ role: "user", content: message }]
     })
   });
   return response.json();
 }
 
-// R2R document ingestion
-async function ingestDocument(text: string, metadata: object) {
-  const response = await fetch(`${R2R_URL}/v3/ingest`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      document: { text, metadata }
-    })
-  });
-  return response.json();
-}
-
-// Qdrant search
-async function searchVectors(collection: string, vector: number[], limit = 10) {
-  const response = await fetch(
-    `${QDRANT_URL}/collections/${collection}/points/search`,
-    {
-      method: "POST",
-      headers: {
-        "api-key": QDRANT_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ vector, limit })
-    }
-  );
-  return response.json();
-}
+// Example usage
+const result = await chatCompletion("What is LiteLLM?");
+console.log(result.choices[0].message.content);
 ```
 
 ---
@@ -848,11 +508,10 @@ async function searchVectors(collection: string, vector: number[], limit = 10) {
 ## Additional Resources
 
 - **Architecture Overview**: [`docs/architecture/OVERVIEW.md`](OVERVIEW.md:1)
-- **Troubleshooting Guide**: [`docs/troubleshooting/COMMON_ISSUES.md`](../troubleshooting/COMMON_ISSUES.md:1)
 - **Environment Variables**: [`ENV_VARIABLES_GUIDE.md`](../../ENV_VARIABLES_GUIDE.md:1)
 - **Service READMEs**: [`services/*/README.md`](../../services/README.md:1)
 
 ---
 
-**Last Updated**: 2026-01-19  
-**Version**: 1.0 (Railway-optimized)
+**Last Updated**: 2026-03-26  
+**Version**: 2.0 (Simplified - LiteLLM + PostgreSQL + Redis)

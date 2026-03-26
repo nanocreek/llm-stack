@@ -29,7 +29,7 @@ spec:
     spec:
       containers:
       - name: postgres
-        image: pgvector/pgvector:pg15
+        image: pgvector/pgvector:pg16
         ports:
         - containerPort: 5432
           name: postgres
@@ -42,7 +42,7 @@ spec:
               name: postgres-secret
               key: password
         - name: POSTGRES_DB
-          value: r2r_db
+          value: litellm
         - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
         volumeMounts:
@@ -66,4 +66,5 @@ spec:
           periodSeconds: 10
       volumes:
       - name: postgres-data
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: postgres-data

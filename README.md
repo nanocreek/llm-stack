@@ -1,6 +1,6 @@
 # LiteLLM with Redis for Production
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy?referralCode=YOUR_REFERRAL_CODE)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/llm-stack?referralCode=qeah9u&utm_medium=integration&utm_source=template&utm_campaign=generic)
 
 Production-ready LiteLLM proxy with PostgreSQL and Redis. Unified API for 100+ LLM providers.
 
